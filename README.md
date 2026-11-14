@@ -1,3 +1,5 @@
+<p align="center"><img src="docs/logo.svg" width="96" height="96" alt="Agentwright logo"></p>
+
 # Agentwright
 
 A place to learn Python for building AI agents by building them. You write real agent code with the plain Anthropic SDK, a mentor judges it against clear criteria, and what you finish becomes an agent you keep and use as a chatbot. It runs on a Windows PC (the **Python Scratchpad** window) and on an Android phone (the **Python Learning Lab** app), with your own Anthropic API key.
