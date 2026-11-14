@@ -6,6 +6,8 @@ A place to learn Python for building AI agents by building them. You write real 
 
 > **Status: early and personal.** This began as one person's study tool and is published as it stands. It teaches agents with Anthropic's SDK specifically. The PC side is Windows only. You bring your own API key and pay for the calls your programs and the mentor make. Code you run in "PC Python", and any agent you import, runs on your PC without a sandbox: read code before you run it.
 
+**Download:** ready-made builds for Windows and Android are on the [Releases](../../releases) page. To build it yourself, see below.
+
 The idea in one line: **learn, build, keep.** Every exercise ends with working software that is yours, and the agent you chat with tomorrow is the code you wrote today, open to change at any moment.
 
 ## What is in it
