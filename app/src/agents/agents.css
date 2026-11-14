@@ -1,0 +1,53 @@
+/* My Agents: the list on the left, one agent (chat, code or console) on the right. */
+.agents { display: flex; height: 100%; min-height: 0; }
+.agents-empty { padding: 20px; }
+.agents-list { flex: 0 0 230px; overflow-y: auto; padding: 10px; border-right: 1px solid var(--line); }
+.agents-list .row { margin: 0 0 10px; }
+.agents-list button { padding: 5px 10px; min-height: 0; }
+.agents-list ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.agents-item { width: 100%; display: flex; flex-direction: column; text-align: left; border-color: transparent; background: transparent; }
+.agents-item:hover { background: var(--soft); }
+.agents-item.active { border-color: var(--line); background: var(--soft); font-weight: 600; }
+.agents-item .small { font-weight: 400; }
+
+.agents-main { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; min-height: 0; }
+.agents-pad { padding: 16px 20px; overflow-y: auto; }
+.agents-pad h2 { margin: 0 0 10px; font-size: 1.1rem; }
+.agents-preview { max-height: 50vh; overflow: auto; white-space: pre; font-family: var(--mono); font-size: 13px; background: var(--soft); padding: 10px; border-radius: var(--radius); }
+.agents-head { flex: none; margin: 0; padding: 8px 12px; gap: 8px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+.agents-head button { padding: 5px 10px; min-height: 0; white-space: nowrap; }
+.agents-head .pad-space { flex: 1; }
+.agents-name { flex: 0 1 220px; min-width: 120px; font-weight: 600; padding: 5px 8px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--bg); color: var(--fg); font-size: 1rem; }
+.agents-name:hover, .agents-name:focus { border-color: var(--fg); }
+.agents-views { display: flex; border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
+.agents-views button { border: 0; border-radius: 0; background: transparent; color: var(--muted); }
+.agents-views button.active { background: var(--soft); color: var(--fg); font-weight: 600; }
+.agents-stale { flex: none; margin: 8px 12px 0; }
+
+.agents-code { flex: 1 1 0; min-height: 0; display: flex; flex-direction: column; padding: 10px 12px; gap: 8px; }
+.agents-description { flex: none; padding: 6px 8px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--bg); color: var(--fg); }
+.agents-editor { flex: 1 1 0; min-height: 0; }
+.agents-editor .editor-fill, .agents-editor .editor, .agents-editor .editor > div, .agents-editor .cm-editor { height: 100%; }
+.agents-console { flex: 1 1 0; min-height: 0; overflow-y: auto; padding: 10px 12px; }
+
+.agents-chat { flex: 1 1 0; min-height: 0; display: flex; flex-direction: column; }
+.agents-talk { flex: 1 1 0; min-height: 0; overflow-y: auto; padding: 14px 16px; display: flex; flex-direction: column; gap: 8px; }
+.agents-talk > p { margin: 0; }
+.agents-bubble { max-width: 78%; padding: 8px 12px; border-radius: 12px; white-space: pre-wrap; word-break: break-word; border: 1px solid var(--line); }
+.agents-bubble.agent { align-self: flex-start; background: var(--soft); }
+.agents-bubble.you { align-self: flex-end; border-color: var(--accent); }
+.agents-bubble.error { align-self: flex-start; max-width: 100%; color: var(--bad); font-family: var(--mono); font-size: 12.5px; border-color: var(--bad); }
+.agents-say { flex: none; margin: 0; padding: 10px 12px; border-top: 1px solid var(--line); gap: 8px; }
+.agents-say input { flex: 1; padding: 8px 10px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--bg); color: var(--fg); font-size: 14px; }
+.agents-say button { padding: 6px 14px; min-height: 0; }
+
+/* The tool-call inspector under an exchange. */
+.agents-trace { align-self: stretch; margin: -2px 0 6px; }
+.agents-trace-line { padding: 2px 6px; min-height: 0; font-size: 0.8rem; color: var(--muted); border: 0; background: transparent; text-align: left; }
+.agents-trace-line:hover { color: var(--fg); }
+.agents-calls { margin: 4px 0 4px 6px; padding: 8px 10px 8px 30px; border-left: 2px solid var(--line); font-size: 0.9rem; }
+.agents-calls li { margin-bottom: 12px; }
+.agents-calls p { margin: 0 0 4px; }
+.agents-calls pre.code { margin: 2px 0 6px; padding: 6px 8px; background: var(--soft); border-radius: var(--radius); font-family: var(--mono); font-size: 12.5px; white-space: pre-wrap; word-break: break-word; }
+.agents-call { margin: 6px 0; }
+.agents-said { white-space: pre-wrap; }

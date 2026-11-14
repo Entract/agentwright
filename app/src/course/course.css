@@ -1,0 +1,76 @@
+/* The guided course in the phone app: one column. The PC window has its own layout in desktop.css. */
+.course-page h1 { font-size: 1.2rem; margin: 12px 0 6px; }
+.course-page h2 { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); margin: 18px 0 6px; }
+.course-page h3 { font-size: 0.95rem; margin: 16px 0 2px; }
+.course-page p code, .course-page li code, .course-page summary code, .course-page div > code { font-family: var(--mono); font-size: 0.88em; background: var(--soft); padding: 1px 4px; border-radius: 4px; }
+.course-page pre.code { white-space: pre-wrap; word-break: break-word; font-size: 12.5px; margin: 6px 0 8px; }
+.course-page pre.code.diff { white-space: pre; overflow-x: auto; }
+
+.course-page .course-nav { flex-wrap: nowrap; }
+.course-nav select { flex: 1 1 auto; min-width: 0; width: auto; }
+.course-nav button { flex: none; padding: 8px 12px; }
+
+.course-page .ex-id { font-family: var(--mono); background: var(--fg); color: var(--bg); border-radius: 5px; padding: 1px 7px; margin-right: 4px; }
+.course-page .task { font-size: 1.02rem; }
+.course-page .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.course-page .chip { font-size: 0.75rem; border: 1px solid var(--line); border-radius: 999px; padding: 1px 9px; color: var(--muted); background: transparent; min-height: 0; }
+.course-page .chip.status-independent, .course-page .chip.status-secure { border-color: var(--ok); color: var(--ok); }
+.course-page .chip.status-helped, .course-page .chip.status-marked { border-color: var(--warn); color: var(--warn); }
+.course-page .chip.status-started { border-color: var(--accent); color: var(--accent); }
+.course-page .linkish { border: none; background: none; color: var(--accent); padding: 0; min-height: 0; text-decoration: underline; font: inherit; }
+.course-page .chip.linkish { border: 1px solid var(--line); padding: 1px 9px; text-decoration: none; font-size: 0.75rem; }
+
+.course-page .lesson { border-left: 3px solid var(--accent); padding: 2px 0 2px 10px; }
+.course-page .lesson p:last-child { margin-bottom: 0; }
+.course-page .app-note { border-left: 3px solid var(--warn); padding: 4px 10px; background: var(--soft); border-radius: 0 var(--radius) var(--radius) 0; font-size: 0.93rem; }
+.course-page .hint { border-left: 3px solid var(--accent); padding: 4px 10px; background: var(--soft); border-radius: 0 var(--radius) var(--radius) 0; }
+.course-page .why { margin-top: 10px; border-top: 1px solid var(--line); padding-top: 6px; }
+.course-page .why summary { padding: 6px 0; }
+.course-page .why ul { margin: 4px 0; padding-left: 20px; }
+
+.course-page .files, .course-page .tabs-row { gap: 4px; flex-wrap: nowrap; overflow-x: auto; }
+.course-page .tabs-row { border-bottom: 1px solid var(--line); margin-top: 12px; }
+.course-page .file { flex: none; border: 1px solid transparent; border-bottom: none; border-radius: 6px 6px 0 0; padding: 6px 12px; min-height: 0; color: var(--muted); background: transparent; white-space: nowrap; font-size: 0.9rem; }
+.course-page .file.active { border-color: var(--line); color: var(--fg); background: var(--soft); font-weight: 600; }
+.course-page .course-bar { margin: 10px 0 4px; }
+.course-bar button { flex: 1 1 auto; }
+.course-page button.primary.alt { background: var(--accent); color: var(--bg); border-color: var(--accent); }
+.course-results { padding-top: 8px; min-height: 60px; }
+.course-actions { margin-top: 14px; }
+
+.course-page .course-pass { color: var(--ok); }
+.course-page .course-fail { color: var(--bad); }
+.course-page .cases { list-style: none; margin: 0 0 10px; padding: 0; }
+.course-page .case { border-left: 3px solid var(--line); padding: 4px 10px; margin-bottom: 4px; background: var(--soft); border-radius: 0 6px 6px 0; }
+.course-page .case.ok { border-left-color: var(--ok); }
+.course-page .case.bad { border-left-color: var(--bad); }
+.course-page .case.warn { border-left-color: var(--warn); }
+.course-page .case-mark { font-weight: 600; }
+.course-page .case.ok .case-mark { color: var(--ok); }
+.course-page .case.bad .case-mark { color: var(--bad); }
+.course-page .case-detail { margin-top: 3px; }
+
+.course-page .map-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 6px; }
+.course-page .map-item { display: flex; flex-direction: column; align-items: flex-start; text-align: left; gap: 1px; padding: 6px 8px; min-height: 0; border: 1px solid var(--line); border-radius: var(--radius); background: var(--bg); color: var(--fg); }
+.course-page .map-item.current { border-color: var(--fg); }
+.course-page .map-item.status-independent, .course-page .map-item.status-secure { border-left: 4px solid var(--ok); }
+.course-page .map-item.status-helped, .course-page .map-item.status-marked { border-left: 4px solid var(--warn); }
+.course-page .map-item.status-started { border-left: 4px solid var(--accent); }
+.course-page .map-id { font-family: var(--mono); font-weight: 600; }
+.course-page .map-title { font-size: 0.85rem; }
+.course-page .mastery { border-collapse: collapse; width: 100%; font-size: 0.9rem; margin-bottom: 8px; }
+.course-page .mastery th, .course-page .mastery td { text-align: left; padding: 3px 8px; border-bottom: 1px solid var(--line); }
+
+.course-page .diff-added { display: block; background: color-mix(in srgb, var(--ok) 22%, transparent); }
+.course-page .diff-removed { display: block; background: color-mix(in srgb, var(--bad) 22%, transparent); }
+.course-page .diff-same { display: block; color: var(--muted); }
+
+/* Briefing around a task */
+.course-page .examples { list-style: none; margin: 0 0 8px; padding: 0; }
+.course-page .examples li { border-left: 3px solid var(--line); padding: 4px 10px; margin-bottom: 4px; background: var(--soft); border-radius: 0 6px 6px 0; }
+.course-page .examples .when { font-weight: 600; }
+.course-page .examples .then { margin-top: 2px; }
+.course-page .given { margin: 0 0 8px; }
+.course-page .given dt { margin-top: 6px; }
+.course-page .given dd { margin: 2px 0 0 0; }
+.course-page .python-point p { margin: 10px 0 2px; }

@@ -1,0 +1,135 @@
+/* Desktop scratchpad: editor above, output below, both scroll inside a fixed window. */
+body { overflow: hidden; }
+
+.pad { display: flex; flex-direction: column; height: 100%; padding: 10px; gap: 8px; }
+
+.pad-editor { flex: 3 1 0; min-height: 80px; }
+.editor-fill, .editor-fill .editor, .editor-fill .editor > div, .editor-fill .cm-editor { height: 100%; }
+
+.pad-bar { flex: none; flex-wrap: nowrap; }
+.pad-bar button { padding: 6px 10px; min-height: 0; white-space: nowrap; flex: none; }
+.pad-space { flex: 1; }
+
+.pad-output { flex: 2 1 0; min-height: 60px; overflow-y: auto; border-top: 1px solid var(--line); padding-top: 8px; }
+.pad-output h3 { margin: 0 0 6px; font-size: 0.85rem; color: var(--muted); font-weight: 600; }
+.pad-output p { margin: 0 0 8px; }
+
+.pad-bar select { font: inherit; width: auto; flex: 0 1 auto; padding: 6px 6px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--bg); color: var(--fg); min-width: 0; }
+
+/* Output of a program run with the PC's Python: one stream, errors and typed input marked. */
+.pc-stream { margin: 0 0 8px; }
+.stream-err { color: var(--bad); }
+.stream-in { color: var(--accent); }
+.pc-input input { flex: 1; padding: 6px 8px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--bg); color: var(--fg); font-size: 13px; }
+.pc-bad { color: var(--bad); }
+
+/* ---- Two modes in one window ---- */
+.shell { display: flex; flex-direction: column; height: 100%; }
+.modes { flex: none; display: flex; gap: 2px; padding: 6px 10px 0; border-bottom: 1px solid var(--line); }
+.mode { border: 1px solid transparent; border-bottom: none; border-radius: var(--radius) var(--radius) 0 0; padding: 5px 14px; min-height: 0; background: transparent; color: var(--muted); }
+.mode.active { border-color: var(--line); background: var(--soft); color: var(--fg); font-weight: 600; }
+.shell-body { flex: 1 1 0; min-height: 0; }
+.shell-body[hidden] { display: none; }
+
+/* ---- Guided course: task on the left, code on the right ---- */
+.guided { display: grid; grid-template-columns: minmax(340px, 42%) 1fr; height: 100%; min-height: 0; }
+.prompt { overflow-y: auto; padding: 10px 14px 24px; border-right: 1px solid var(--line); min-height: 0; }
+.prompt h1 { font-size: 1.15rem; margin: 10px 0 6px; }
+.prompt h2 { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); margin: 16px 0 6px; }
+.prompt h3 { font-size: 0.95rem; margin: 16px 0 2px; }
+.prompt p { margin: 0 0 8px; }
+.prompt code, .work-output code { font-family: var(--mono); font-size: 0.88em; background: var(--soft); padding: 1px 4px; border-radius: 4px; }
+.prompt pre.code { font-size: 12.5px; margin: 6px 0 8px; }
+.prompt-nav { flex-wrap: nowrap; margin-bottom: 6px; }
+.prompt-nav select { flex: 1 1 auto; min-width: 0; width: auto; padding: 6px; font: inherit; border: 1px solid var(--line); border-radius: var(--radius); background: var(--bg); color: var(--fg); }
+.prompt-nav button, .prompt-actions button, .prompt .quiet { padding: 5px 10px; min-height: 0; white-space: nowrap; }
+.prompt .jump { flex: 1; padding: 5px 8px; font-size: 13px; }
+.ex-id { font-family: var(--mono); background: var(--fg); color: var(--bg); border-radius: 5px; padding: 1px 7px; margin-right: 4px; }
+.task { font-size: 1.02rem; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { font-size: 0.75rem; border: 1px solid var(--line); border-radius: 999px; padding: 1px 9px; color: var(--muted); background: transparent; min-height: 0; }
+.chip.status-independent, .chip.status-secure { border-color: var(--ok); color: var(--ok); }
+.chip.status-helped, .chip.status-marked { border-color: var(--warn); color: var(--warn); }
+.chip.status-started { border-color: var(--accent); color: var(--accent); }
+.linkish { border: none; background: none; color: var(--accent); padding: 0; min-height: 0; text-decoration: underline; cursor: pointer; font: inherit; }
+.chip.linkish { border: 1px solid var(--line); padding: 1px 9px; text-decoration: none; font-size: 0.75rem; }
+.fixture { margin-bottom: 4px; }
+.fixture summary, .why summary { cursor: pointer; padding: 3px 0; }
+.why { margin-top: 10px; border-top: 1px solid var(--line); padding-top: 6px; }
+.why ul { margin: 4px 0; padding-left: 20px; }
+.hint { border-left: 3px solid var(--accent); padding: 4px 10px; background: var(--soft); border-radius: 0 var(--radius) var(--radius) 0; }
+.explain { width: 100%; font: inherit; padding: 6px 8px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--bg); color: var(--fg); resize: vertical; }
+.prompt-actions { margin-top: 14px; }
+
+.work { display: flex; flex-direction: column; min-width: 0; min-height: 0; padding: 10px; gap: 8px; }
+.work-editor { flex: 3 1 0; min-height: 80px; }
+.work-output { flex: 2 1 0; min-height: 60px; overflow-y: auto; }
+.work-output p { margin: 0 0 8px; }
+.files, .tabs-row { flex: none; gap: 4px; flex-wrap: nowrap; overflow-x: auto; }
+.tabs-row { border-bottom: 1px solid var(--line); }
+.file { border: 1px solid transparent; border-bottom: none; border-radius: 6px 6px 0 0; padding: 3px 12px; min-height: 0; color: var(--muted); background: transparent; white-space: nowrap; font-size: 0.9rem; }
+.file.active { border-color: var(--line); color: var(--fg); background: var(--soft); font-weight: 600; }
+button.primary.alt { background: var(--accent); color: var(--bg); border-color: var(--accent); }
+
+.course-pass { color: var(--ok); }
+.course-fail { color: var(--bad); }
+.cases { list-style: none; margin: 0 0 10px; padding: 0; }
+.case { border-left: 3px solid var(--line); padding: 4px 10px; margin-bottom: 4px; background: var(--soft); border-radius: 0 6px 6px 0; }
+.case.ok { border-left-color: var(--ok); }
+.case.bad { border-left-color: var(--bad); }
+.case.warn { border-left-color: var(--warn); }
+.case-mark { font-weight: 600; }
+.case.ok .case-mark { color: var(--ok); }
+.case.bad .case-mark { color: var(--bad); }
+.case-detail { margin-top: 3px; }
+
+.course-map section { margin-bottom: 6px; }
+.map-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 6px; }
+.map-item { display: flex; flex-direction: column; align-items: flex-start; text-align: left; gap: 1px; padding: 6px 8px; min-height: 0; border: 1px solid var(--line); border-radius: var(--radius); background: var(--bg); color: var(--fg); }
+.map-item.current { border-color: var(--fg); }
+.map-item.status-independent, .map-item.status-secure { border-left: 4px solid var(--ok); }
+.map-item.status-helped, .map-item.status-marked { border-left: 4px solid var(--warn); }
+.map-item.status-started { border-left: 4px solid var(--accent); }
+.map-id { font-family: var(--mono); font-weight: 600; }
+.map-title { font-size: 0.85rem; }
+.mastery { border-collapse: collapse; width: 100%; font-size: 0.9rem; margin-bottom: 8px; }
+.mastery th, .mastery td { text-align: left; padding: 3px 8px; border-bottom: 1px solid var(--line); }
+
+@media (max-width: 820px) {
+  .guided { grid-template-columns: 1fr; grid-template-rows: minmax(160px, 42%) 1fr; }
+  .prompt { border-right: none; border-bottom: 1px solid var(--line); }
+}
+.prompt pre.code { white-space: pre-wrap; word-break: break-word; }
+.app-note { border-left: 3px solid var(--warn); padding: 4px 10px; background: var(--soft); border-radius: 0 var(--radius) var(--radius) 0; font-size: 0.93rem; }
+
+/* The bar between the editor and the output: drag it, or focus it and use the arrow keys. */
+.divider { flex: none; height: 10px; margin: -4px 0; cursor: row-resize; position: relative; touch-action: none; border-radius: 4px; }
+.divider::after { content: ""; position: absolute; left: 50%; top: 3px; width: 44px; height: 4px; margin-left: -22px; border-radius: 2px; background: var(--line); }
+.divider:hover, .divider:focus-visible { background: var(--soft); outline: none; }
+.divider:hover::after, .divider:focus-visible::after, .divider:active::after { background: var(--accent); }
+
+/* The short explanation some exercises give before their task. */
+.lesson { border-left: 3px solid var(--accent); padding: 2px 0 2px 10px; }
+.lesson p:last-child { margin-bottom: 0; }
+
+/* Project milestones: the locked panel and the "what changed" view. */
+.work[hidden] { display: none; }
+.locked { max-width: 520px; margin: 40px auto; padding: 0 10px; }
+.locked h2 { font-size: 1.1rem; margin: 0 0 10px; }
+pre.code.diff { white-space: pre; overflow-x: auto; }
+.diff-added { display: block; background: color-mix(in srgb, var(--good, #2e9e5b) 22%, transparent); }
+.diff-removed { display: block; background: color-mix(in srgb, var(--bad, #d0453f) 22%, transparent); }
+.diff-same { display: block; color: var(--muted); }
+
+/* The one button that makes real requests. */
+.pad-bar button.live { border-color: var(--warn); color: var(--warn); }
+
+/* Briefing around a task */
+.examples { list-style: none; margin: 0 0 8px; padding: 0; }
+.examples li { border-left: 3px solid var(--line); padding: 4px 10px; margin-bottom: 4px; background: var(--soft); border-radius: 0 6px 6px 0; }
+.examples .when { font-weight: 600; }
+.examples .then { margin-top: 2px; }
+.given { margin: 0 0 8px; }
+.given dt { margin-top: 6px; }
+.given dd { margin: 2px 0 0 0; }
+.python-point p { margin: 10px 0 2px; }

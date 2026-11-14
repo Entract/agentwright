@@ -1,0 +1,10 @@
+{
+  "title": "Sample: dictionaries and a guard function",
+  "questions": [
+    {"type": "recall", "topic": "dict", "question": "What is the difference between d[\"key\"] and d.get(\"key\") when the key is missing?", "answer": "d[\"key\"] stops the program with a KeyError. d.get(\"key\") gives None and carries on."},
+    {"type": "choice", "topic": "isinstance", "question": "Which line is True?", "options": ["isinstance(7, str)", "isinstance(\"7\", str)", "isinstance([7], str)"], "answer": 1, "why": "Only \"7\" is text. 7 is a number and [7] is a list."},
+    {"type": "predict", "topic": "in", "question": "What does this print?", "code": "order = {\"item\": \"tea\"}\nprint(\"item\" in order)\nprint(\"tea\" in order)", "why": "`in` on a dictionary looks at the keys, not the values."},
+    {"type": "predict", "topic": "KeyError", "question": "What happens when this runs?", "code": "order = {\"item\": \"tea\"}\nprint(order[\"milk\"])", "why": "Square brackets with a missing key raise KeyError."},
+    {"type": "write", "topic": "guard", "question": "Write a function safe_double(args). If args has no \"n\" key, return {\"error\": \"missing n\"}. Otherwise return double(args[\"n\"]).", "setup": "def double(n):\n    return n * 2", "starter": "def safe_double(args):\n    pass\n", "tests": [{"run": "safe_double({\"n\": 4})", "expect": "8"}, {"run": "safe_double({})", "expect": "{\"error\": \"missing n\"}"}], "solution": "def safe_double(args):\n    if \"n\" not in args:\n        return {\"error\": \"missing n\"}\n    return double(args[\"n\"])\n", "why": "Check the key exists before using it."}
+  ]
+}

@@ -1,0 +1,30 @@
+node_modules/
+dist/
+dist-desktop/
+app/public/pyodide/
+*.log
+.env
+.env.*
+*.keystore
+*.jks
+
+# Android build output
+app/android/.gradle/
+app/android/build/
+app/android/app/build/
+app/android/local.properties
+app/android/app/src/main/assets/public/
+app/android/capacitor-cordova-android-plugins/
+
+
+# Desktop scratchpad build output
+desktop/bin/
+desktop/obj/
+desktop/publish/
+desktop/app/
+desktop/build/
+
+# Downloaded Python wheels (re-fetched and hash-checked by copy-pyodide)
+app/vendor/
+__pycache__/
+app/tsconfig.tsbuildinfo
