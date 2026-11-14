@@ -950,6 +950,7 @@ export default function Revision({ storage, saveFile, phoneKeys = false, wide = 
               {due.length ? `Practise what is due (${Math.min(due.length, SESSION_SIZE)}${due.length > SESSION_SIZE ? ` of ${due.length}` : ''})` : 'Nothing is due right now'}
             </button>
           </div>
+          <p className="muted small">Your passes are remembered. A question you pass is due again after 10 minutes, then a day, 3 days and a week, and counts as secure once you have passed it twice in a row.</p>
           <ul className="rev-sets">
             {store.sets.map((s) => {
               const sum = setSummary(store, s.id, now)
@@ -958,8 +959,8 @@ export default function Revision({ storage, saveFile, phoneKeys = false, wide = 
                 <li key={s.id}>
                   <div>
                     <strong>{s.title}</strong>
-                    <div className="muted small">
-                      {sum.total} questions · {sum.due} due · {sum.secure} secure · {sum.missed} missed{faulty ? ` · ${faulty} possibly faulty` : ''}
+                    <div className="muted small" title="Passed: got right at least once. Due: ready to be asked again; a question you pass comes back after 10 minutes, then a day, 3 days and a week. Secure: passed twice in a row. Missed: got wrong last time.">
+                      {sum.total} questions · {sum.passed} passed · {sum.due} due · {sum.secure} secure · {sum.missed} missed{faulty ? ` · ${faulty} possibly faulty` : ''}
                     </div>
                   </div>
                   <div className="row">

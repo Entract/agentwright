@@ -209,18 +209,20 @@ export function wholeSet(store: Store, setId: string): Pick[] {
   return allPicks(store, setId)
 }
 
-export function setSummary(store: Store, setId: string, now: number): { total: number; due: number; secure: number; missed: number } {
+export function setSummary(store: Store, setId: string, now: number): { total: number; passed: number; due: number; secure: number; missed: number } {
   const picks = allPicks(store, setId)
   let due = 0
+  let passed = 0
   let secure = 0
   let missed = 0
   for (const p of picks) {
     const card = store.cards[p.key]
     if (!card || card.due <= now) due++
+    if (card && card.right > 0) passed++
     if (card && card.box >= 2) secure++
     if (card && card.box === 0 && card.wrong > 0) missed++
   }
-  return { total: picks.length, due, secure, missed }
+  return { total: picks.length, passed, due, secure, missed }
 }
 
 /** The run that checks a write question. The setup is put above the learner's code. */

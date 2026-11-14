@@ -81,7 +81,7 @@ describe('the schedule', () => {
     expect(s.cards[cardKey(id, 0)].due).toBe(5000 + GAPS[1] + GAPS[2])
     s = record(s, cardKey(id, 3), false, 9000)
     expect(dueNow(s, 9001)[0].index).toBe(3)
-    expect(setSummary(s, id, 9001)).toEqual({ total: 5, due: 4, secure: 1, missed: 1 })
+    expect(setSummary(s, id, 9001)).toEqual({ total: 5, passed: 1, due: 4, secure: 1, missed: 1 })
     expect(removeSet(s, id)).toEqual(emptyStore())
   })
 
