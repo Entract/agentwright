@@ -623,7 +623,9 @@ function QuestionCard({ pick, fault, phoneKeys, wide, host, onDone }: { pick: Pi
         <p className={mentorVerdict === 'not yet' ? 'rev-bad' : 'rev-warn'} data-testid="rev-mentor-verdict">
           <strong>Mentor: {mentorVerdict === 'not yet' ? 'not yet.' : 'test more.'}</strong>{' '}
           {mentorVerdict === 'not yet'
-              ? 'Its reasons are in the mentor panel.'
+              ? marks.length > 0 && marks.every((m) => m === 'met')
+                ? 'Every listed line is met, but the mentor found a mistake in the code. Its reasons are in the mentor panel.'
+                : 'Its reasons are in the mentor panel.'
               : 'Nothing has failed, but something has not been shown yet. The mentor panel says what to run; then ask again.'}
         </p>
       )}
