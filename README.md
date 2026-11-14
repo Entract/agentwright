@@ -16,6 +16,22 @@ The idea in one line: **learn, build, keep.** Every exercise ends with working s
 - **My Agents.** Save any program as a named agent and talk to it in a chat view. Open its code whenever you like. A tool-call inspector shows, for each reply, every call to Claude, each tool it asked for, what your Python returned, the tokens used and an estimated cost. Agents export and import as single files.
 - **On the phone.** Revision with the mentor, the guided course and a scratchpad, all using the phone's own Python. It also keeps the Python-basics practice this project began as (lessons, spaced review cards, a course map and an optional tutor).
 
+**My Agents:** an agent you wrote, used as a chatbot, with the tool-call inspector open under its reply.
+
+![My Agents: a chat with a saved agent, and the inspector showing the tool call and what the Python returned](docs/screenshots/15-my-agents.png)
+
+**Revision:** the question on the left, your code and its run in the middle, and the mentor judging it on the right.
+
+![Revision: a code question judged done by the mentor](docs/screenshots/16-revision-mentor.png)
+
+**Guided course:** one exercise, with what is going on, the task and what the tests will try.
+
+![Guided course: exercise 3C](docs/screenshots/17-guided-course.png)
+
+**On the phone,** in landscape: the same editor and run, with the question and mentor on tabs at the edges.
+
+![Phone in landscape: editor, a program being typed into, and the edge tabs](docs/screenshots/18-phone-landscape.png)
+
 ## Where this is going
 
 - **Learning packs for kinds of agent.** A pack is a guided path to one working agent: a research agent with web search, an agent that keeps notes between conversations, an instrument agent, and so on. Each pack teaches the Python and the agent ideas it needs, and ends with an agent saved in My Agents.
@@ -251,4 +267,4 @@ In rough order of importance:
 
 ## Screenshots
 
-Real captures from an Android 15 emulator in airplane mode, in `docs/screenshots/`.
+Beyond the four near the top of this file, `docs/screenshots/` holds earlier captures: 01 to 10 are from an Android 15 emulator in airplane mode and show the Python-basics practice, and 11 to 13 are the PC window.
