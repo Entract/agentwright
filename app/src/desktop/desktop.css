@@ -133,3 +133,10 @@ pre.code.diff { white-space: pre; overflow-x: auto; }
 .given dt { margin-top: 6px; }
 .given dd { margin: 2px 0 0 0; }
 .python-point p { margin: 10px 0 2px; }
+
+/* The Scratchpad with its mentor panel beside it. */
+.pad-row { display: flex; height: 100%; min-height: 0; }
+.pad-row > .pad { flex: 1 1 0; min-width: 0; }
+.pad-row > .scratch-mentor { flex: 0 0 36%; min-width: 300px; max-width: 520px; }
+.pad-row > .pad { min-width: 340px; }
+.pad-row .pad-bar { flex-wrap: wrap; row-gap: 6px; }

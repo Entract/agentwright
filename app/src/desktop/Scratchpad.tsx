@@ -7,9 +7,12 @@ import { useDivider } from './Divider'
 import { PcOutput, addChunk, type PcRun } from './PcOutput'
 import { hasHost, onHostMessage, sendToHost, type HostInfo } from './host'
 import { saveAsAgent } from '../agents/store'
+import ScratchMentor from './ScratchMentor'
+import '../revision/revision.css'
 
 const STORE_KEY = 'scratchpad-code'
 const MODE_KEY = 'scratchpad-mode'
+const MENTOR_KEY = 'scratchpad-mentor'
 const SAMPLE = `readings = [9.5, 10.2, 11.8]
 for reading in readings:
     print(reading)
@@ -49,6 +52,46 @@ export default function Scratchpad({ active = true }: { active?: boolean }) {
   const [pcRun, setPcRun] = useState<PcRun | null>(null)
   const [running, setRunning] = useState(false)
   const [savedAs, setSavedAs] = useState('')
+  const [mentorOpen, setMentorOpen] = useState(() => read(MENTOR_KEY, 'closed') === 'open')
+  // Code highlighted in the editor is offered to the mentor.
+  const [selection, setSelection] = useState('')
+  const pad = useRef<HTMLDivElement>(null)
+  const resultRef = useRef<RunResult | null>(null)
+  resultRef.current = result
+  const pcRunRef = useRef<PcRun | null>(null)
+  pcRunRef.current = pcRun
+
+  function showMentor(open: boolean) {
+    setMentorOpen(open)
+    write(MENTOR_KEY, open ? 'open' : 'closed')
+    // The panel needs room beside the editor.
+    if (open) sendToHost({ type: 'size', width: 1180, height: 760 })
+  }
+
+  /** What the last run showed, as the mentor is told it. */
+  function latestOutput(): string {
+    if (modeRef.current === 'pc') {
+      const ran = pcRunRef.current
+      if (!ran) return ''
+      const done = ran.done
+      const status = !done ? '[still running]' : done.problem ? done.problem : done.stopped ? '[stopped]' : done.code ? `[ended with an error, exit code ${done.code}]` : '[finished without an error]'
+      return `${ran.chunks.map((c) => c.text).join('')}\n${status}`
+    }
+    const ran = resultRef.current
+    if (!ran) return ''
+    return `${ran.stdout}${ran.error ? `\n${ran.error.traceback || `${ran.error.type}: ${ran.error.message}`}` : ''}`
+  }
+
+  useEffect(() => {
+    const onSelect = () => {
+      const picked = document.getSelection()
+      const editor = pad.current?.querySelector('.cm-content')
+      if (!picked || !editor || !picked.anchorNode || !editor.contains(picked.anchorNode)) return
+      setSelection(picked.toString())
+    }
+    document.addEventListener('selectionchange', onSelect)
+    return () => document.removeEventListener('selectionchange', onSelect)
+  }, [])
   const latest = useRef(code)
   const modeRef = useRef(mode)
   const busy = useRef(false)
@@ -118,7 +161,8 @@ export default function Scratchpad({ active = true }: { active?: boolean }) {
   const pcReady = !!host?.python
 
   return (
-    <div className="pad">
+    <div className="pad-row">
+    <div className="pad" ref={pad}>
       <div className="pad-editor" style={split.upper}>
         <CodeEditor value={code} onChange={change} showKeys={false} fill />
       </div>
@@ -201,6 +245,24 @@ export default function Scratchpad({ active = true }: { active?: boolean }) {
           <p className="muted">Output appears here.</p>
         )}
       </div>
+    </div>
+      {hasHost() && (
+        <>
+          <ScratchMentor
+            state={() => ({ code: latest.current, output: latestOutput(), selection })}
+            hasKey={!!host?.hasKey}
+            selection={selection}
+            onClearSelection={() => setSelection('')}
+            onHide={() => showMentor(false)}
+            open={mentorOpen}
+          />
+          {!mentorOpen && (
+            <button className="rev-side-closed rev-mentor-closed" onClick={() => showMentor(true)} title="Ask Claude about the code in the editor">
+              ◂ Ask Mentor
+            </button>
+          )}
+        </>
+      )}
     </div>
   )
 }

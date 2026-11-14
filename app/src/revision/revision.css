@@ -136,3 +136,19 @@
   .rev-phone .rev-session-head, .rev-phone .rev-bench .pad-output, .rev-phone .rev-bench .divider { display: none; }
   .rev-phone .editor-fill .keys button { min-height: 28px; }
 }
+
+/* The Scratchpad's free-form mentor (PC window and phone). */
+.scratch-mentor-starts { display: flex; flex-direction: column; gap: 4px; margin-top: 8px; }
+.scratch-mentor-starts button { text-align: left; padding: 5px 8px; min-height: 0; white-space: normal; }
+.scratch-mentor-code { position: relative; }
+.scratch-mentor-code pre.code { margin: 6px 0 10px; padding: 8px 10px; background: var(--soft); border-radius: var(--radius); font-family: var(--mono); font-size: 13px; white-space: pre-wrap; word-break: break-word; }
+.scratch-mentor-code button { position: absolute; top: 4px; right: 4px; padding: 1px 8px; min-height: 0; font-size: 0.75rem; background: var(--bg); }
+
+/* On the phone it slides in from the right over the scratchpad. */
+.scratch-mentor.on-phone { position: fixed; top: 0; right: 0; bottom: 0; z-index: 31; width: min(92%, 440px); min-width: 0; max-width: none; background: var(--bg); box-shadow: 0 0 18px rgba(0, 0, 0, 0.35); padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom); box-sizing: border-box; }
+.scratch-backdrop { position: fixed; inset: 0; z-index: 30; background: rgba(0, 0, 0, 0.3); }
+.scratch-mentor.on-phone .rev-mentor-top button { padding: 6px 12px; font-size: 0.95rem; }
+.scratch-mentor.on-phone textarea { font-size: 16px; width: 100%; box-sizing: border-box; }
+@media (max-height: 420px) {
+  .scratch-mentor.on-phone textarea { height: 40px; min-height: 0; }
+}

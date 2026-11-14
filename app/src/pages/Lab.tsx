@@ -9,6 +9,13 @@ import { allExercises } from '../learn/store'
 import { getRunner } from '../runner/client'
 import { canWaitForNetwork, needsNetwork, type RunResult } from '../runner/core'
 import { loadApiKey } from '../tutor/settings'
+import ScratchMentor from '../desktop/ScratchMentor'
+import { onHostMessage, sendToHost } from '../desktop/host'
+import { installPhoneHost } from '../revision/phoneHost'
+import '../revision/revision.css'
+
+// The mentor panel talks to the phone's stand-in for the PC window's host program.
+installPhoneHost()
 import type { Attempt, Exercise } from '../types'
 
 const SAMPLE = `readings = [9.5, 10.2, 11.8]
@@ -82,10 +89,17 @@ function Scratchpad() {
   const [result, setResult] = useState<RunResult | null>(null)
   const [running, setRunning] = useState(false)
   const [note, setNote] = useState('')
+  const [mentorOpen, setMentorOpen] = useState(false)
+  const [hasKey, setHasKey] = useState(false)
 
   useEffect(() => {
     getRunner().warm()
     getSetting('scratchpad', SAMPLE).then(setCode)
+    const off = onHostMessage((m) => {
+      if (m.type === 'host') setHasKey(m.hasKey)
+    })
+    sendToHost({ type: 'hello' })
+    return off
   }, [])
 
   if (code === null) return <p className="muted">Loading…</p>
@@ -138,9 +152,26 @@ function Scratchpad() {
         <button className="quiet" onClick={() => setCode('')}>
           Clear
         </button>
+        <button onClick={() => setMentorOpen(true)} title="Ask Claude about this code">
+          Ask Mentor
+        </button>
       </div>
       {note && <p className="muted small">{note}</p>}
       {result && <RunOutput result={result} />}
+      {mentorOpen && <div className="scratch-backdrop" onClick={() => setMentorOpen(false)} />}
+      <ScratchMentor
+        phone
+        state={() => ({
+          code: code ?? '',
+          output: result ? `${result.stdout}${result.error ? `\n${result.error.traceback || `${result.error.type}: ${result.error.message}`}` : ''}` : '',
+          selection: '',
+        })}
+        hasKey={hasKey}
+        selection=""
+        onClearSelection={() => undefined}
+        onHide={() => setMentorOpen(false)}
+        open={mentorOpen}
+      />
     </>
   )
 }
