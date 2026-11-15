@@ -21,6 +21,8 @@ export type HostMessage =
   | { type: 'progress'; json: string }
   | { type: 'mentorText'; id: number; text: string }
   | { type: 'mentorDone'; id: number; problem?: string | null; stopped?: boolean }
+  | { type: 'files'; files: { name: string; text: string }[]; skipped: number; problem?: string }
+  | { type: 'fileProblem'; name: string; problem: string }
 
 /** What labcheck.py reports about itself: which exercises have tests, and any multi-file workspaces. */
 export interface CourseInfo {
@@ -41,7 +43,10 @@ export type Outgoing =
   | { type: 'courseImport' }
   | { type: 'size'; width: number; height: number }
   | { type: 'hello' }
-  | { type: 'run'; id: number; code: string; trace?: boolean }
+  | { type: 'run'; id: number; code: string; trace?: boolean; file?: string }
+  | { type: 'files' }
+  | { type: 'fileWrite'; name: string; text: string }
+  | { type: 'fileDelete'; name: string }
   | { type: 'stdin'; text: string }
   | { type: 'stop' }
   | { type: 'key' }

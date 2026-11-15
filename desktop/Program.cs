@@ -30,6 +30,7 @@ internal static class Program
         private readonly PythonHost python;
         private readonly CourseHost course;
         private readonly MentorHost mentor;
+        private readonly WorkFiles workFiles;
 
         public MainForm()
         {
@@ -44,6 +45,7 @@ internal static class Program
             python = new PythonHost(Send);
             course = new CourseHost(python, Send);
             mentor = new MentorHost(Send);
+            workFiles = new WorkFiles(Send);
             Load += async (_, _) => await StartAsync();
             FormClosed += (_, _) => { python.Stop(); mentor.Stop(); };
         }
@@ -130,7 +132,7 @@ internal static class Program
                         Send(await python.DescribeAsync());
                         break;
                     case "run":
-                        python.Run(Number("id"), Text("code"), Flag("trace"));
+                        python.Run(Number("id"), Text("code"), Flag("trace"), Text("file"));
                         break;
                     case "stdin":
                         python.SendInput(Text("text"));
@@ -153,6 +155,15 @@ internal static class Program
                         break;
                     case "folder":
                         python.OpenWorkFolder();
+                        break;
+                    case "files":
+                        workFiles.List();
+                        break;
+                    case "fileWrite":
+                        workFiles.Write(Text("name"), Text("text"));
+                        break;
+                    case "fileDelete":
+                        workFiles.Delete(Text("name"));
                         break;
                     case "course":
                         Send(await course.DescribeAsync());

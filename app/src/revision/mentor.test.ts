@@ -96,3 +96,27 @@ describe('readMarks', () => {
     expect(readMarks(reply, 4)).toEqual(['met', 'not met', 'not shown', null])
   })
 })
+
+describe('what the Scratchpad mentor is sent', () => {
+  it('names the file in the editor and includes the other files', async () => {
+    const { freeMentorMessage, FREE_MENTOR_SYSTEM } = await import('./mentorText')
+    const sent = freeMentorMessage('Why can it not find my file?', {
+      code: 'import json',
+      output: '',
+      selection: '',
+      name: 'reader.py',
+      others: [{ name: 'schedule.json', text: '{"appointments": []}' }],
+    })
+    expect(sent).toContain('The file showing in their editor is reader.py.')
+    expect(sent).toContain('<other_files_in_their_folder>')
+    expect(sent).toContain('--- schedule.json ---')
+    expect(sent).toContain('{"appointments": []}')
+    expect(FREE_MENTOR_SYSTEM).toContain('file tabs')
+  })
+  it('says nothing about files when there are none', async () => {
+    const { freeMentorMessage } = await import('./mentorText')
+    const sent = freeMentorMessage('Hello', { code: 'x = 1', output: '', selection: '' })
+    expect(sent).not.toContain('other_files')
+    expect(sent).not.toContain('The file showing')
+  })
+})

@@ -42,7 +42,7 @@ Write plainly and briefly. Short paragraphs. Put code in fenced code blocks. No 
 /** The Scratchpad's mentor: no exercise and no levels, so it may teach and write code freely. */
 export const FREE_MENTOR_SYSTEM = `You are the mentor inside a Python scratchpad. The person typing is learning Python and is learning to build agents with the Anthropic Python SDK. They may not be a trained programmer. This is their free space: there is no exercise and nothing is being marked.
 
-Each message carries the code in their editor at that moment, the latest output of their program and any code they have highlighted. Earlier messages show earlier states of their code. Always work from the newest one. If highlighted code is given, the question is about that code.
+Each message carries the code in their editor at that moment, the latest output of their program and any code they have highlighted. The Scratchpad has file tabs: the first tab, "scratch", is a single program; the + button makes a named file (.py, .json, .txt, .csv or .md) saved in the folder their programs run in, so open("name.json") and "import name" find it. When they have such files, the message names the one in the editor and includes the others. If a task needs a data file or a second module, tell them to make it with the + button; do not send them to Notepad or a terminal. Earlier messages show earlier states of their code. Always work from the newest one. If highlighted code is given, the question is about that code.
 
 What you do here:
 - Answer what they ask. Explain code, find the cause of an error, review their work, compare ways of doing something, or teach a topic from scratch.
@@ -58,6 +58,8 @@ Write plainly and briefly, in short paragraphs. Define a term the first time you
 
 const MAX_OUTPUT = 6000
 const MAX_CODE = 30000
+const MAX_OTHER_FILES = 8
+const MAX_OTHER_FILE = 4000
 
 export interface MentorState {
   code: string
@@ -65,6 +67,10 @@ export interface MentorState {
   output: string
   /** Code highlighted in the editor, if any. */
   selection: string
+  /** Scratchpad only: the name of the file showing in the editor, when it is a saved file. */
+  name?: string
+  /** Scratchpad only: the other files in the learner's folder. */
+  others?: { name: string; text: string }[]
 }
 
 const clip = (text: string, limit: number, keepEnd: boolean): string =>
@@ -100,11 +106,16 @@ export function mentorMessage(question: Extract<Question, { type: 'write' }>, le
 
 /** One message to the Scratchpad's mentor, with the state of the editor attached. */
 export function freeMentorMessage(asked: string, state: MentorState): string {
-  const parts = [
+  const parts: string[] = []
+  if (state.name) parts.push(`The file showing in their editor is ${state.name}.`)
+  parts.push(
     block('their_code_now', state.code.trim() ? clip(state.code, MAX_CODE, false) : '(the editor is empty)'),
     block('latest_output', state.output.trim() ? clip(state.output, MAX_OUTPUT, true) : '(nothing has been run yet)'),
-  ]
+  )
   if (state.selection.trim()) parts.push(block('highlighted_code', clip(state.selection, MAX_CODE, false)))
+  // The other files in the folder, so "why can't it find schedule.json" can be answered.
+  const others = (state.others ?? []).slice(0, MAX_OTHER_FILES)
+  if (others.length) parts.push(block('other_files_in_their_folder', others.map((f) => `--- ${f.name} ---\n${clip(f.text, MAX_OTHER_FILE, false)}`).join('\n\n')))
   parts.push(block('their_message', asked.trim()))
   return parts.join('\n\n')
 }

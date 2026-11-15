@@ -41,13 +41,23 @@ internal sealed class PythonHost(Action<object> send)
     /// Starts the program through lab_trace.py, which reports each call the program makes to the
     /// Anthropic API on stderr (marked lines the page reads for its tool-call inspector).
     /// </param>
-    public void Run(int id, string code, bool trace = false)
+    /// <param name="file">
+    /// A file tab to run instead of the typed code: a .py file in the working folder, already saved.
+    /// </param>
+    public void Run(int id, string code, bool trace = false, string file = "")
     {
         try
         {
             Directory.CreateDirectory(AppPaths.Work);
             var runDir = Path.Combine(AppPaths.Data, "run");
             Directory.CreateDirectory(runDir);
+            if (file.Length > 0)
+            {
+                var saved = WorkFiles.PathFor(file);
+                if (!file.EndsWith(".py", StringComparison.OrdinalIgnoreCase) || !File.Exists(saved)) throw new FileNotFoundException($"{file} is not a saved Python file in the folder.");
+                Launch(id, ["-u", saved], AppPaths.Work, withKey: true, timeLimitMs: 0, hidePath: saved, showAs: file);
+                return;
+            }
             var script = Path.Combine(runDir, "main.py");
             File.WriteAllText(script, code, new UTF8Encoding(false));
             if (trace)
@@ -100,7 +110,7 @@ internal sealed class PythonHost(Action<object> send)
         return found is { } p ? (p.Path, p.Args) : null;
     }
 
-    private void Launch(int id, string[] arguments, string workingDirectory, bool withKey, int timeLimitMs, string? hidePath, bool live = false)
+    private void Launch(int id, string[] arguments, string workingDirectory, bool withKey, int timeLimitMs, string? hidePath, bool live = false, string showAs = "main.py")
     {
         if (found is not { } python)
         {
@@ -162,8 +172,8 @@ internal sealed class PythonHost(Action<object> send)
         _ = Task.Run(async () =>
         {
             // Tracebacks name the temporary file; "main.py" is clearer.
-            var output = PumpAsync(process.StandardOutput, id, "out", null);
-            var errors = PumpAsync(process.StandardError, id, "err", hidePath);
+            var output = PumpAsync(process.StandardOutput, id, "out", null, showAs);
+            var errors = PumpAsync(process.StandardError, id, "err", hidePath, showAs);
             var finished = Task.WhenAll(output, errors, process.WaitForExitAsync());
             if (timeLimitMs > 0 && await Task.WhenAny(finished, Task.Delay(timeLimitMs)) != finished)
             {
@@ -185,7 +195,7 @@ internal sealed class PythonHost(Action<object> send)
         });
     }
 
-    private async Task PumpAsync(StreamReader reader, int id, string stream, string? hidePath)
+    private async Task PumpAsync(StreamReader reader, int id, string stream, string? hidePath, string showAs)
     {
         var buffer = new char[MaxChunk];
         try
@@ -201,7 +211,7 @@ internal sealed class PythonHost(Action<object> send)
                 // Line by line, so the path can be replaced even when it is long.
                 string? line;
                 while ((line = await reader.ReadLineAsync()) is not null)
-                    send(new { type = "out", id, stream, text = line.Replace(hidePath, "main.py") + "\n" });
+                    send(new { type = "out", id, stream, text = line.Replace(hidePath, showAs) + "\n" });
             }
         }
         catch (Exception)
