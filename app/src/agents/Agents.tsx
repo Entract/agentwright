@@ -44,6 +44,8 @@ export default function Agents() {
   const [line, setLine] = useState('')
   const [incoming, setIncoming] = useState<AgentDraft | null>(null)
   const [message, setMessage] = useState('')
+  /** Something worth knowing that is not a problem. */
+  const [info, setInfo] = useState('')
   const runId = useRef(0)
   /** What the tracer reported about each call to Claude, with the exchange it happened in. */
   const [events, setEvents] = useState<{ turn: number; event: TraceEvent }[]>([])
@@ -134,13 +136,16 @@ export default function Agents() {
           setView('code')
           // A new agent starts with its name selected, ready to be typed over.
           setTimeout(() => nameBox.current?.select(), 50)
+        } else if (m.created && !runId.current) {
+          // Saved from the Scratchpad or Revision: show it, so it is there when this tab is opened.
+          open(m.created)
         }
       } else if (m.type === 'agentProblem') {
         expectNew.current = false
         setMessage(m.problem)
       } else if (m.type === 'agentsBackedUp') {
         clearOldAgents()
-        setMessage('Agents saved by the earlier version have been cleared: each agent now has its own folder. A copy of the old ones is in the agents folder.')
+        setInfo('Agents saved by the earlier version have been cleared: each agent now has its own folder. A copy of the old ones is in the agents folder.')
       }
     })
     sendToHost({ type: 'hello' })
@@ -296,6 +301,7 @@ export default function Agents() {
           <input ref={fileInput} type="file" accept=".json,.py,application/json,text/x-python" hidden onChange={(e) => { void chooseFile(e.target.files?.[0]); e.target.value = '' }} />
         </div>
         {agents.length === 0 && <p className="muted small">No agents yet. Start a new one, import one, or press “Save as agent” in the Scratchpad.</p>}
+        {agents.length > 0 && <h3 className="agents-list-title">Your agents</h3>}
         <ul>
           {agents.map((a) => (
             <li key={a.id}>
@@ -307,6 +313,14 @@ export default function Agents() {
           ))}
         </ul>
         {message && <p className="notice bad small" data-testid="agents-message">{message}</p>}
+        {info && (
+          <p className="notice small agents-info" data-testid="agents-info">
+            {info}{' '}
+            <button className="quiet" onClick={() => setInfo('')}>
+              OK
+            </button>
+          </p>
+        )}
         {folder && (
           <button className="quiet agents-folder" onClick={() => sendToHost({ type: 'agentFolder', id: '' })} title={folder}>
             Open the agents folder
@@ -354,7 +368,20 @@ export default function Agents() {
           <div className="agents-pad">
             <h2>My Agents</h2>
             <p>Save a program you wrote and use it as a chatbot. It reads what you say with <code>input()</code> and answers with <code>print()</code>; everything else is up to your code.</p>
-            <p className="muted">Pick an agent on the left, or start a new one.</p>
+            {agents.length > 0 ? (
+              <>
+                <p className="muted">Pick one of your agents to open it, or start a new one.</p>
+                <div className="agents-pick">
+                  {agents.map((a) => (
+                    <button key={a.id} onClick={() => open(a.id)}>
+                      {a.name}
+                    </button>
+                  ))}
+                </div>
+              </>
+            ) : (
+              <p className="muted">You have no agents yet. Start a new one on the left, or press “Save as agent” in the Scratchpad.</p>
+            )}
           </div>
         </section>
       ) : (
