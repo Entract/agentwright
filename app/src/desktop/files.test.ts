@@ -40,3 +40,20 @@ describe('runTarget', () => {
     expect(runTarget('s.json', 'gone.py', ['s.json'])).toBe('')
   })
 })
+
+describe('usedFiles', () => {
+  it('finds imported modules, what they import, and data files named in the code', async () => {
+    const { usedFiles } = await import('./files')
+    const files = {
+      'tools.py': 'import json\nfrom store import load\nNAME = "notes.txt"\n',
+      'store.py': 'def load(): pass\n',
+      'schedule.json': '{}',
+      'notes.txt': '',
+      'unrelated.py': 'print(1)\n',
+      'other.csv': '',
+    }
+    const code = 'import json, tools\nwith open("schedule.json") as f:\n    pass\n'
+    expect(usedFiles(code, files).sort()).toEqual(['notes.txt', 'schedule.json', 'store.py', 'tools.py'])
+    expect(usedFiles('print(1)', files)).toEqual([])
+  })
+})

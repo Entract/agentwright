@@ -77,6 +77,29 @@ internal sealed class PythonHost(Action<object> send)
     }
 
     /// <summary>
+    /// Starts a saved agent: its main script, in its own folder, with the saved API key, through
+    /// the tracer so the page can show each call it makes to Claude.
+    /// </summary>
+    public void RunAgent(int id, string folder, string main)
+    {
+        try
+        {
+            var runDir = Path.Combine(AppPaths.Data, "run");
+            Directory.CreateDirectory(runDir);
+            var tracer = Path.Combine(runDir, "lab_trace.py");
+            using (var source = typeof(PythonHost).Assembly.GetManifestResourceStream("lab_trace.py") ?? throw new InvalidOperationException("The tracing script is missing from this build."))
+            using (var target = File.Create(tracer))
+                source.CopyTo(target);
+            var script = Path.Combine(folder, main);
+            Launch(id, ["-u", tracer, script], folder, withKey: true, timeLimitMs: 0, hidePath: script, showAs: main);
+        }
+        catch (Exception ex)
+        {
+            send(new { type = "exit", id, problem = $"Python could not be started: {ex.Message}" });
+        }
+    }
+
+    /// <summary>
     /// Guided-course run: the exercise's fixtures are defined first by labcheck.py. No API key is
     /// passed, and the program is stopped after a minute. A project milestone (LAB-..) is a chat
     /// the learner types into, so it may run for fifteen minutes.

@@ -31,6 +31,7 @@ internal static class Program
         private readonly CourseHost course;
         private readonly MentorHost mentor;
         private readonly WorkFiles workFiles;
+        private readonly AgentFiles agentFiles;
 
         public MainForm()
         {
@@ -46,6 +47,7 @@ internal static class Program
             course = new CourseHost(python, Send);
             mentor = new MentorHost(Send);
             workFiles = new WorkFiles(Send);
+            agentFiles = new AgentFiles(Send);
             Load += async (_, _) => await StartAsync();
             FormClosed += (_, _) => { python.Stop(); mentor.Stop(); };
         }
@@ -132,7 +134,19 @@ internal static class Program
                         Send(await python.DescribeAsync());
                         break;
                     case "run":
-                        python.Run(Number("id"), Text("code"), Flag("trace"), Text("file"));
+                        if (Text("agent") is { Length: > 0 } agentId)
+                        {
+                            try
+                            {
+                                var (folder, main) = agentFiles.Runnable(agentId);
+                                python.RunAgent(Number("id"), folder, main);
+                            }
+                            catch (Exception ex)
+                            {
+                                Send(new { type = "exit", id = Number("id"), problem = ex.Message });
+                            }
+                        }
+                        else python.Run(Number("id"), Text("code"), Flag("trace"), Text("file"));
                         break;
                     case "stdin":
                         python.SendInput(Text("text"));
@@ -161,6 +175,30 @@ internal static class Program
                         break;
                     case "fileWrite":
                         workFiles.Write(Text("name"), Text("text"));
+                        break;
+                    case "agents":
+                        agentFiles.List();
+                        break;
+                    case "agentCreate":
+                        agentFiles.Create(Text("name"), Text("description"), Text("main"), Files());
+                        break;
+                    case "agentMeta":
+                        agentFiles.Change(Text("id"), root);
+                        break;
+                    case "agentFileWrite":
+                        agentFiles.Write(Text("id"), Text("name"), Text("text"));
+                        break;
+                    case "agentFileDelete":
+                        agentFiles.DeleteFile(Text("id"), Text("name"));
+                        break;
+                    case "agentDelete":
+                        agentFiles.Delete(Text("id"));
+                        break;
+                    case "agentFolder":
+                        agentFiles.OpenFolder(Text("id"));
+                        break;
+                    case "agentsBackup":
+                        agentFiles.Backup(Text("json"));
                         break;
                     case "fileDelete":
                         workFiles.Delete(Text("name"));
@@ -212,6 +250,11 @@ internal static class AppPaths
     public static string Data => Environment.GetEnvironmentVariable("SCRATCHPAD_DATA") is { Length: > 0 } custom
         ? custom
         : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "PythonScratchpad");
+
+    /// <summary>Where saved agents live: one folder each, holding that agent's own files.</summary>
+    public static string Agents => Environment.GetEnvironmentVariable("SCRATCHPAD_AGENTS") is { Length: > 0 } custom
+        ? custom
+        : Work + " Agents";
 
     /// <summary>The folder programs run in, so files they read and write are easy to find.</summary>
     public static string Work => Environment.GetEnvironmentVariable("SCRATCHPAD_WORK") is { Length: > 0 } custom

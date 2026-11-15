@@ -34,3 +34,33 @@ export function runTarget(shown: string, lastPython: string, names: string[]): s
   if (!shown || /\.py$/i.test(shown)) return shown
   return names.includes(lastPython) ? lastPython : ''
 }
+
+/**
+ * The other files a program appears to use: modules it imports (and what those import), and
+ * any file whose name is written in the code, such as "schedule.json". A guess, offered as
+ * the ticked boxes when a program is saved as an agent; the learner has the last word.
+ */
+export function usedFiles(code: string, files: Record<string, string>): string[] {
+  const names = Object.keys(files)
+  const found = new Set<string>()
+  const queue = [code]
+  while (queue.length) {
+    const text = queue.pop()!
+    const imported = new Set<string>()
+    for (const line of text.split('\n')) {
+      const plain = /^\s*import\s+(.+)$/.exec(line)
+      if (plain) for (const part of plain[1].split(',')) imported.add(part.trim().split(/[\s.]/)[0])
+      const from = /^\s*from\s+([A-Za-z_][A-Za-z0-9_]*)/.exec(line)
+      if (from) imported.add(from[1])
+    }
+    for (const name of names) {
+      if (found.has(name)) continue
+      const isPython = /\.py$/i.test(name)
+      if (isPython ? imported.has(name.slice(0, -3)) : text.includes(name)) {
+        found.add(name)
+        if (isPython) queue.push(files[name])
+      }
+    }
+  }
+  return names.filter((name) => found.has(name))
+}

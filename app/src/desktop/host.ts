@@ -23,6 +23,22 @@ export type HostMessage =
   | { type: 'mentorDone'; id: number; problem?: string | null; stopped?: boolean }
   | { type: 'files'; files: { name: string; text: string }[]; skipped: number; problem?: string }
   | { type: 'fileProblem'; name: string; problem: string }
+  | { type: 'agents'; agents: HostAgent[]; created?: string | null; problem?: string; folder: string }
+  | { type: 'agentProblem'; problem: string }
+  | { type: 'agentsBackedUp' }
+
+/** A saved agent as the host program reads it from its folder. */
+export interface HostAgent {
+  id: string
+  name: string
+  description: string
+  main: string
+  created: number
+  updated: number
+  spentUsd: number
+  files: { name: string; text: string }[]
+  skipped: number
+}
 
 /** What labcheck.py reports about itself: which exercises have tests, and any multi-file workspaces. */
 export interface CourseInfo {
@@ -43,7 +59,15 @@ export type Outgoing =
   | { type: 'courseImport' }
   | { type: 'size'; width: number; height: number }
   | { type: 'hello' }
-  | { type: 'run'; id: number; code: string; trace?: boolean; file?: string }
+  | { type: 'run'; id: number; code: string; trace?: boolean; file?: string; agent?: string }
+  | { type: 'agents' }
+  | { type: 'agentCreate'; name: string; description: string; main: string; files: Record<string, string> }
+  | { type: 'agentMeta'; id: string; name?: string; description?: string; main?: string; spent?: number }
+  | { type: 'agentFileWrite'; id: string; name: string; text: string }
+  | { type: 'agentFileDelete'; id: string; name: string }
+  | { type: 'agentDelete'; id: string }
+  | { type: 'agentFolder'; id: string }
+  | { type: 'agentsBackup'; json: string }
   | { type: 'files' }
   | { type: 'fileWrite'; name: string; text: string }
   | { type: 'fileDelete'; name: string }

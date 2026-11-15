@@ -70,3 +70,15 @@ Export writes one `.agent.json`: name, description, code, and optionally pinned 
 ## Storage
 
 Slice 1 keeps agents where Revision keeps its sets: the PC window's own storage (and the phone app's settings table later), which survives app updates. Each agent can be exported as a file. If agents need to be opened in other editors, a later slice can move them to files under the Scratchpad's work folder (`agents/<id>/agent.py`).
+
+## Built since: an agent is a folder (t-050)
+
+Decided with the user on 2026-11-15, after file tabs were added to the Scratchpad.
+
+- The Scratchpad is a notebook that is not attached to anything. Saving as an agent copies the script and the files it needs into a folder the agent owns, under `Documents\Python Scratchpad Agents`. From then on the two drift apart, on purpose.
+- Save as agent shows a checklist of the Scratchpad's other files, pre-ticked with what the script seems to use (imports, followed through modules, and file names written in the code).
+- One Python file is the script that runs (`main` in `agent.meta`). Edit code shows a tab per file, marks that script, and lets another `.py` file take its place. My Agents has its own New file button.
+- The agent runs in its own folder, so files it writes (a saved conversation, notes) stay with it.
+- Export carries every file (format version 2); import shows every file before anything is added, and still reads version 1.
+- Agents saved by the first version (single programs in the window's storage) were cleared at the user's request; a backup file is written first.
+- The host program keeps the agents (`desktop/AgentFiles.cs`); the page holds no copy of its own beyond what is on screen.

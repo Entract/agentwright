@@ -1,12 +1,13 @@
-// My Agents (PC window): programs the learner saved, used as chatbots. The agent is the
-// learner's own Python, run with the PC's Python exactly as the Scratchpad runs it. The chat
-// view is that program's input() and print(), shown as a conversation.
+// My Agents (PC window): programs the learner saved, used as chatbots. An agent is a folder of
+// the learner's own files, one of which is the script that runs, started with the PC's Python
+// in that folder. The chat view is that program's input() and print(), shown as a conversation.
 import { Fragment, useEffect, useRef, useState } from 'react'
 import CodeEditor from '../components/CodeEditor'
 import { addChunk, emptyPcRun, type PcRun } from '../desktop/PcOutput'
 import { hasHost, onHostMessage, sendToHost, type HostInfo } from '../desktop/host'
 import { saveTextFile } from '../db/files'
-import { STARTER, addSpend, addAgent, agentFileName, changeAgent, exportAgent, loadAgents, onAgentsChanged, parseAgentFile, removeAgent, saveAgents, toBubbles, waitingPrompt, type AgentStore } from './store'
+import FileTabs from '../desktop/FileTabs'
+import { STARTER, agentFileName, clearOldAgents, createAgent, exportAgent, fromHost, oldAgents, parseAgentFile, toBubbles, waitingPrompt, type Agent, type AgentDraft } from './store'
 import { callCost, money, pretty, readTrace, summarise, summaryLine, type TraceEvent } from './trace'
 import './agents.css'
 
@@ -17,7 +18,17 @@ const OPEN_KEY = 'my-agents-open'
 type View = 'chat' | 'code' | 'console'
 
 export default function Agents() {
-  const [store, setStore] = useState<AgentStore>(loadAgents)
+  const [agents, setAgents] = useState<Agent[]>([])
+  const agentsRef = useRef(agents)
+  /** Where the agent folders are, for the learner to find them. */
+  const [folder, setFolder] = useState('')
+  /** Files typed in but not yet written to the agent's folder, as "agent id/file name". */
+  const unsaved = useRef(new Set<string>())
+  const saveTimer = useRef(0)
+  /** Set when this section asked for a new agent, so it is opened when it arrives. */
+  const expectNew = useRef(false)
+  /** The file showing in Edit code. */
+  const [file, setFile] = useState('')
   const [openId, setOpenId] = useState<string | null>(() => {
     try {
       return localStorage.getItem(OPEN_KEY)
@@ -28,10 +39,10 @@ export default function Agents() {
   const [view, setView] = useState<View>('chat')
   const [host, setHost] = useState<HostInfo | null>(null)
   const [run, setRun] = useState<PcRun | null>(null)
-  /** The code the running program was started with, to tell when the editor has moved on from it. */
+  /** The files the running program was started with, to tell when the editor has moved on from them. */
   const [ranCode, setRanCode] = useState<string | null>(null)
   const [line, setLine] = useState('')
-  const [incoming, setIncoming] = useState<{ name: string; description: string; code: string } | null>(null)
+  const [incoming, setIncoming] = useState<AgentDraft | null>(null)
   const [message, setMessage] = useState('')
   const runId = useRef(0)
   /** What the tracer reported about each call to Claude, with the exchange it happened in. */
@@ -46,10 +57,40 @@ export default function Agents() {
   const box = useRef<HTMLInputElement>(null)
   const nameBox = useRef<HTMLInputElement>(null)
 
-  const agent = store.agents.find((a) => a.id === openId) ?? null
-  const running = !!run && !run.done
+  const agent = agents.find((a) => a.id === openId) ?? null
+  const names = agent ? Object.keys(agent.files).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' })) : []
+  const shown = agent ? (file in agent.files ? file : agent.main in agent.files ? agent.main : (names[0] ?? '')) : ''
+  /** What a run depends on: which script runs, and every file's text. */
+  const snapshot = (a: Agent) => JSON.stringify([a.main, a.files])
 
-  useEffect(() => onAgentsChanged(() => setStore(loadAgents())), [])
+  function keep(next: Agent[]) {
+    agentsRef.current = next
+    setAgents(next)
+  }
+
+  /** Changes one agent on screen. The caller tells the host program what to write. */
+  function change(id: string, edit: (a: Agent) => Agent) {
+    keep(agentsRef.current.map((a) => (a.id === id ? edit(a) : a)))
+  }
+
+  /** Writes every changed file to its agent's folder. Done shortly after typing, and before a start. */
+  function saveFiles() {
+    window.clearTimeout(saveTimer.current)
+    for (const entry of unsaved.current) {
+      const [id, name] = [entry.slice(0, entry.indexOf('/')), entry.slice(entry.indexOf('/') + 1)]
+      const text = agentsRef.current.find((a) => a.id === id)?.files[name]
+      if (text !== undefined) sendToHost({ type: 'agentFileWrite', id, name, text })
+    }
+    unsaved.current.clear()
+  }
+
+  function edit(id: string, name: string, text: string) {
+    change(id, (a) => ({ ...a, files: { ...a.files, [name]: text } }))
+    unsaved.current.add(`${id}/${name}`)
+    window.clearTimeout(saveTimer.current)
+    saveTimer.current = window.setTimeout(saveFiles, 500)
+  }
+  const running = !!run && !run.done
 
   useEffect(() => {
     const off = onHostMessage((m) => {
@@ -63,33 +104,61 @@ export default function Agents() {
         setEvents((old) => [...old, { turn: typedCount.current, event }])
         const cost = callCost(event)
         const id = openRef.current
-        if (cost && id)
-          setStore((old) => {
-            const next = addSpend(old, id, cost)
-            saveAgents(next)
-            return next
-          })
+        if (cost && id) {
+          change(id, (a) => ({ ...a, spentUsd: a.spentUsd + cost }))
+          sendToHost({ type: 'agentMeta', id, spent: cost })
+        }
       }
       else if (m.type === 'exit' && m.id === runId.current) {
         runId.current = 0
         setRun((r) => ({ ...(r ?? emptyPcRun()), done: { code: m.code, stopped: m.stopped, ms: m.ms, problem: m.problem } }))
+        // The program may have written files of its own, such as a saved conversation.
+        sendToHost({ type: 'agents' })
+      } else if (m.type === 'agents') {
+        // A file being typed in right now keeps what is on screen.
+        const before = new Map(agentsRef.current.map((a) => [a.id, a]))
+        keep(
+          fromHost(m.agents).map((a) => {
+            const old = before.get(a.id)
+            if (!old) return a
+            const files = { ...a.files }
+            for (const name of Object.keys(old.files)) if (unsaved.current.has(`${a.id}/${name}`)) files[name] = old.files[name]
+            return { ...a, files }
+          }),
+        )
+        setFolder(m.folder)
+        if (m.problem) setMessage(m.problem)
+        if (m.created && expectNew.current) {
+          expectNew.current = false
+          open(m.created)
+          setView('code')
+          // A new agent starts with its name selected, ready to be typed over.
+          setTimeout(() => nameBox.current?.select(), 50)
+        }
+      } else if (m.type === 'agentProblem') {
+        expectNew.current = false
+        setMessage(m.problem)
+      } else if (m.type === 'agentsBackedUp') {
+        clearOldAgents()
+        setMessage('Agents saved by the earlier version have been cleared: each agent now has its own folder. A copy of the old ones is in the agents folder.')
       }
     })
     sendToHost({ type: 'hello' })
+    sendToHost({ type: 'agents' })
+    // The first version kept agents inside this window. They are cleared, with a copy left on disk.
+    const old = oldAgents()
+    if (old) sendToHost({ type: 'agentsBackup', json: old })
     return () => {
       off()
+      saveFiles()
       if (runId.current) sendToHost({ type: 'stop' })
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   useEffect(() => {
     end.current?.scrollIntoView({ block: 'nearest' })
   }, [run, view])
-
-  function update(next: AgentStore) {
-    setStore(next)
-    if (!saveAgents(next)) setMessage('This could not be saved: the window’s storage is full or unavailable.')
-  }
 
   function open(id: string | null) {
     if (runId.current) sendToHost({ type: 'stop' })
@@ -99,6 +168,7 @@ export default function Agents() {
     setInspecting(null)
     setRanCode(null)
     setOpenId(id)
+    setFile('')
     setView('chat')
     setMessage('')
     try {
@@ -118,9 +188,10 @@ export default function Agents() {
     setEvents([])
     setInspecting(null)
     typedCount.current = 0
-    setRanCode(agent.code)
+    saveFiles()
+    setRanCode(snapshot(agent))
     setView((v) => (v === 'code' ? 'chat' : v))
-    sendToHost({ type: 'run', id, code: agent.code, trace: true })
+    sendToHost({ type: 'run', id, code: '', agent: agent.id })
     setTimeout(() => box.current?.focus(), 50)
   }
 
@@ -132,13 +203,10 @@ export default function Agents() {
     setLine('')
   }
 
-  function create() {
-    const made = addAgent(store, { name: 'New agent', code: STARTER }, Date.now())
-    update(made.store)
-    open(made.agent.id)
-    setView('code')
-    // A new agent starts with its name selected, ready to be typed over.
-    setTimeout(() => nameBox.current?.select(), 50)
+  function create(draft: AgentDraft) {
+    expectNew.current = true
+    setMessage('')
+    createAgent(draft)
   }
 
   async function chooseFile(file: File | undefined) {
@@ -155,7 +223,7 @@ export default function Agents() {
 
   const bubbles = run ? toBubbles(run.chunks, running) : []
   const prompt = run && running ? waitingPrompt(run.chunks) : ''
-  const stale = ranCode !== null && agent !== null && ranCode !== agent.code
+  const stale = ranCode !== null && agent !== null && ranCode !== snapshot(agent)
 
   /** The line under an exchange saying what it took, and, when opened, every call to Claude in it. */
   function inspector(turn: number) {
@@ -221,15 +289,15 @@ export default function Agents() {
     <div className="agents" data-testid="agents">
       <aside className="agents-list">
         <div className="row">
-          <button className="primary" onClick={create}>
+          <button className="primary" onClick={() => create({ name: 'New agent', description: '', main: 'main.py', files: { 'main.py': STARTER } })}>
             New agent
           </button>
           <button onClick={() => fileInput.current?.click()}>Import…</button>
           <input ref={fileInput} type="file" accept=".json,.py,application/json,text/x-python" hidden onChange={(e) => { void chooseFile(e.target.files?.[0]); e.target.value = '' }} />
         </div>
-        {store.agents.length === 0 && <p className="muted small">No agents yet. Start a new one, import one, or press “Save as agent” in the Scratchpad.</p>}
+        {agents.length === 0 && <p className="muted small">No agents yet. Start a new one, import one, or press “Save as agent” in the Scratchpad.</p>}
         <ul>
-          {store.agents.map((a) => (
+          {agents.map((a) => (
             <li key={a.id}>
               <button className={a.id === openId ? 'agents-item active' : 'agents-item'} onClick={() => open(a.id)}>
                 <span>{a.name}</span>
@@ -239,6 +307,11 @@ export default function Agents() {
           ))}
         </ul>
         {message && <p className="notice bad small" data-testid="agents-message">{message}</p>}
+        {folder && (
+          <button className="quiet agents-folder" onClick={() => sendToHost({ type: 'agentFolder', id: '' })} title={folder}>
+            Open the agents folder
+          </button>
+        )}
       </aside>
 
       {incoming ? (
@@ -249,16 +322,25 @@ export default function Agents() {
               An agent is a program. When you run it, it runs on this PC with your files and your API key within reach, like any script you start yourself. Read the code below, and only add it if you understand it or trust where it came
               from.
             </p>
-            <pre className="code agents-preview">{incoming.code}</pre>
+            <p className="muted small">
+              It runs <code>{incoming.main}</code>
+              {Object.keys(incoming.files).length > 1 ? ` and brings ${Object.keys(incoming.files).length - 1} more file${Object.keys(incoming.files).length === 2 ? '' : 's'}. Read all of them.` : '.'}
+            </p>
+            {[incoming.main, ...Object.keys(incoming.files).filter((name) => name !== incoming.main)].map((name) => (
+              <Fragment key={name}>
+                <p className="agents-preview-name">
+                  <code>{name}</code>
+                  {name === incoming.main ? ' (the script that runs)' : ''}
+                </p>
+                <pre className="code agents-preview">{incoming.files[name]}</pre>
+              </Fragment>
+            ))}
             <div className="row">
               <button
                 className="primary"
                 onClick={() => {
-                  const made = addAgent(store, incoming, Date.now())
-                  update(made.store)
+                  create(incoming)
                   setIncoming(null)
-                  open(made.agent.id)
-                  setView('code')
                 }}
               >
                 I have read it: add to My Agents
@@ -281,7 +363,7 @@ export default function Agents() {
             <label className="muted small" htmlFor="agent-name">
               Name
             </label>
-            <input id="agent-name" ref={nameBox} className="agents-name" value={agent.name} placeholder="Name this agent" title="Type here to rename this agent" aria-label="Agent name" onChange={(e) => update(changeAgent(store, agent.id, { name: e.target.value }, Date.now()))} />
+            <input id="agent-name" ref={nameBox} className="agents-name" value={agent.name} placeholder="Name this agent" title="Type here to rename this agent" aria-label="Agent name" onChange={(e) => { change(agent.id, (a) => ({ ...a, name: e.target.value })); sendToHost({ type: 'agentMeta', id: agent.id, name: e.target.value }) }} />
             <div className="agents-views" role="tablist">
               {(['chat', 'code', 'console'] as View[]).map((v) => (
                 <button key={v} role="tab" aria-selected={view === v} className={view === v ? 'active' : undefined} onClick={() => setView(v)}>
@@ -304,15 +386,17 @@ export default function Agents() {
             <button className="quiet" onClick={() => sendToHost({ type: 'key' })} title="Anthropic API key for your programs">
               {host?.hasKey ? 'Key ✓' : 'Key…'}
             </button>
-            <button className="quiet" onClick={() => void saveTextFile(agentFileName(agent), exportAgent(agent))} title="Saves this agent as a file to share. The file holds the code and its name, not your key or your conversations.">
+            <button className="quiet" onClick={() => void saveTextFile(agentFileName(agent), exportAgent(agent))} title="Saves this agent as a file to share. The file holds the agent's files and its name, not your key. Check that none of its files holds something private, such as a saved conversation.">
               Export
             </button>
             <button
               className="quiet"
               onClick={() => {
-                if (!window.confirm(`Delete “${agent.name}”? Its code is removed from My Agents.`)) return
-                update(removeAgent(store, agent.id))
+                if (!window.confirm(`Delete “${agent.name}”? Its folder, with all its files, goes to the Recycle Bin.`)) return
+                const id = agent.id
                 open(null)
+                keep(agentsRef.current.filter((a) => a.id !== id))
+                sendToHost({ type: 'agentDelete', id })
               }}
             >
               Delete
@@ -332,10 +416,64 @@ export default function Agents() {
                 value={agent.description}
                 placeholder="One line on what this agent does (optional)"
                 aria-label="Description"
-                onChange={(e) => update(changeAgent(store, agent.id, { description: e.target.value }, Date.now()))}
+                onChange={(e) => { change(agent.id, (a) => ({ ...a, description: e.target.value })); sendToHost({ type: 'agentMeta', id: agent.id, description: e.target.value }) }}
               />
+              <div className="row agents-files">
+                <FileTabs
+                  names={names}
+                  shown={shown}
+                  main={agent.main}
+                  onPick={setFile}
+                  onCreate={(name) => {
+                    change(agent.id, (a) => ({ ...a, files: { ...a.files, [name]: '' } }))
+                    sendToHost({ type: 'agentFileWrite', id: agent.id, name, text: '' })
+                    setFile(name)
+                  }}
+                  onRemove={(name) => {
+                    if (!window.confirm(`Remove ${name} from this agent? It goes to the Recycle Bin.`)) return
+                    unsaved.current.delete(`${agent.id}/${name}`)
+                    change(agent.id, (a) => ({ ...a, files: Object.fromEntries(Object.entries(a.files).filter(([n]) => n !== name)) }))
+                    setFile('')
+                    sendToHost({ type: 'agentFileDelete', id: agent.id, name })
+                  }}
+                  note={agent.skipped ? `${agent.skipped} file${agent.skipped === 1 ? ' is' : 's are'} in the folder but not shown as a tab (too large, or too many).` : ''}
+                  newTitle="New file in this agent's folder: a Python file to import, or a data file"
+                />
+              </div>
+              <div className="row agents-file-bar">
+                {shown === agent.main ? (
+                  <span className="muted small" data-testid="agents-main-note">
+                    ▶ <code>{shown}</code> is the script that runs when the agent starts.
+                  </span>
+                ) : shown.toLowerCase().endsWith('.py') ? (
+                  <>
+                    <span className="muted small">
+                      <code>{shown}</code> is a module. The agent runs <code>{agent.main}</code>.
+                    </span>
+                    <button
+                      className="quiet"
+                      data-testid="agents-make-main"
+                      onClick={() => {
+                        change(agent.id, (a) => ({ ...a, main: shown }))
+                        sendToHost({ type: 'agentMeta', id: agent.id, main: shown })
+                      }}
+                      title="Makes this the script that runs when the agent starts"
+                    >
+                      Run this one instead
+                    </button>
+                  </>
+                ) : (
+                  <span className="muted small">
+                    <code>{shown}</code> is a data file. The agent runs <code>{agent.main}</code>.
+                  </span>
+                )}
+                <span className="pad-space" />
+                <button className="quiet" onClick={() => sendToHost({ type: 'agentFolder', id: agent.id })} title="Opens this agent's folder">
+                  Folder
+                </button>
+              </div>
               <div className="agents-editor">
-                <CodeEditor value={agent.code} onChange={(code) => update(changeAgent(store, agent.id, { code }, Date.now()))} showKeys={false} fill />
+                <CodeEditor key={`${agent.id}/${shown}`} value={agent.files[shown] ?? ''} onChange={(text) => edit(agent.id, shown, text)} showKeys={false} fill />
               </div>
             </div>
           )}

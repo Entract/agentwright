@@ -6,8 +6,9 @@ import { needsNetwork, type RunResult } from '../runner/core'
 import { useDivider } from './Divider'
 import { PcOutput, addChunk, type PcRun } from './PcOutput'
 import { hasHost, hostKind, onHostMessage, sendToHost, type HostInfo } from './host'
-import { fileName, runTarget } from './files'
-import { saveAsAgent } from '../agents/store'
+import { runTarget, usedFiles } from './files'
+import FileTabs from './FileTabs'
+import { createAgent } from '../agents/store'
 import ScratchMentor from './ScratchMentor'
 import '../revision/revision.css'
 
@@ -92,7 +93,6 @@ export default function Scratchpad({ active = true }: { active?: boolean }) {
   const filesRef = useRef(files)
   const [tab, setTab] = useState(() => read(TAB_KEY, ''))
   const [lastPython, setLastPython] = useState('')
-  const [naming, setNaming] = useState<string | null>(null)
   const [fileNote, setFileNote] = useState('')
   const unsaved = useRef(new Set<string>())
   const saveTimer = useRef(0)
@@ -123,20 +123,35 @@ export default function Scratchpad({ active = true }: { active?: boolean }) {
     setTab(name)
     write(TAB_KEY, name)
     if (!name || /\.py$/i.test(name)) setLastPython(name)
-    setNaming(null)
     setFileNote('')
   }
 
-  function createFile(typed: string) {
-    const checked = fileName(typed, Object.keys(filesRef.current))
-    if (checked.problem !== undefined) {
-      setFileNote(checked.problem)
-      return
-    }
-    sendToHost({ type: 'fileWrite', name: checked.name, text: '' })
-    keepFiles({ ...filesRef.current, [checked.name]: '' })
-    pick(checked.name)
+  function createFile(name: string) {
+    sendToHost({ type: 'fileWrite', name, text: '' })
+    keepFiles({ ...filesRef.current, [name]: '' })
+    pick(name)
   }
+
+  // Saving as an agent: the program and the files it needs are copied into a folder of the
+  // agent's own, so nothing done here afterwards changes the agent.
+  const [saving, setSaving] = useState<{ name: string; ticked: string[] } | null>(null)
+
+  function beginSave() {
+    saveFiles()
+    const others = Object.fromEntries(Object.entries(filesRef.current).filter(([name]) => name !== targetRef.current))
+    setSaving({ name: targetRef.current ? targetRef.current.replace(/\.py$/i, '') : 'Scratchpad agent', ticked: usedFiles(runCode(), others) })
+  }
+
+  function finishSave() {
+    if (!saving) return
+    const copied = Object.fromEntries(saving.ticked.filter((name) => name in filesRef.current).map((name) => [name, filesRef.current[name]]))
+    // The scratch tab is not a file, so its program is given a name inside the agent.
+    const main = targetRef.current || ('main.py' in copied ? 'agent_main.py' : 'main.py')
+    createAgent({ name: saving.name.trim() || 'Scratchpad agent', description: '', main, files: { ...copied, [main]: runCode() } })
+    awaitingSave.current = true
+    setSaving(null)
+  }
+  const awaitingSave = useRef(false)
 
   function removeFile(name: string) {
     if (!window.confirm(`Remove ${name} from your folder? It goes to the Recycle Bin.`)) return
@@ -231,6 +246,12 @@ export default function Scratchpad({ active = true }: { active?: boolean }) {
         if (m.problem) setFileNote(m.problem)
         else if (m.skipped) setFileNote(`${m.skipped} file${m.skipped === 1 ? ' is' : 's are'} not shown as a tab (too large, or too many).`)
       } else if (m.type === 'fileProblem') setFileNote(m.problem)
+      else if (awaitingSave.current && (m.type === 'agents' || m.type === 'agentProblem')) {
+        awaitingSave.current = false
+        const made = m.type === 'agents' ? m.agents.find((a) => a.id === m.created) : undefined
+        setSavedAs(made ? `Saved as “${made.name}” in My Agents` : m.type === 'agentProblem' ? m.problem : 'Could not be saved')
+        setTimeout(() => setSavedAs(''), 6000)
+      }
     })
     sendToHost({ type: 'hello' })
     if (tabs) sendToHost({ type: 'files' })
@@ -267,68 +288,69 @@ export default function Scratchpad({ active = true }: { active?: boolean }) {
     <div className="pad-row">
     <div className="pad" ref={pad}>
       {tabs && (
-        <div className="pad-tabs" data-testid="pad-tabs">
-          <span className={shown ? 'pad-tab' : 'pad-tab on'}>
-            <button role="tab" aria-selected={!shown} onClick={() => pick('')} title="One program kept inside this app. It is not a file, so other files cannot import it.">
-              scratch
-            </button>
-          </span>
-          {names.map((name) => (
-            <span key={name} className={name === shown ? 'pad-tab on' : 'pad-tab'}>
-              <button role="tab" aria-selected={name === shown} onClick={() => pick(name)} title={`${name}, saved in your folder`}>
-                {name}
+        <FileTabs
+          scratch
+          names={names}
+          shown={shown}
+          onPick={pick}
+          onCreate={createFile}
+          onRemove={removeFile}
+          note={fileNote}
+          newTitle="New file in your folder: a Python file to import, or a data file such as schedule.json"
+        />
+      )}
+      {saving && (
+        <div className="pad-dialog-back" onClick={() => setSaving(null)}>
+          <form
+            className="pad-dialog"
+            data-testid="save-agent"
+            onClick={(e) => e.stopPropagation()}
+            onSubmit={(e) => {
+              e.preventDefault()
+              finishSave()
+            }}
+          >
+            <h2>Save as agent</h2>
+            <label>
+              <span className="muted small">Name</span>
+              <input autoFocus value={saving.name} onChange={(e) => setSaving({ ...saving, name: e.target.value })} onFocus={(e) => e.target.select()} />
+            </label>
+            <p>
+              Runs: <code>{target || 'the scratch program'}</code>
+            </p>
+            {names.filter((name) => name !== target).length > 0 ? (
+              <>
+                <p className="muted small">Files to copy into the agent. The ones it seems to use are ticked; change this if the guess is wrong.</p>
+                <ul className="pad-dialog-files">
+                  {names
+                    .filter((name) => name !== target)
+                    .map((name) => (
+                      <li key={name}>
+                        <label>
+                          <input
+                            type="checkbox"
+                            checked={saving.ticked.includes(name)}
+                            onChange={(e) => setSaving({ ...saving, ticked: e.target.checked ? [...saving.ticked, name] : saving.ticked.filter((n) => n !== name) })}
+                          />
+                          <code>{name}</code>
+                        </label>
+                      </li>
+                    ))}
+                </ul>
+              </>
+            ) : (
+              <p className="muted small">There are no other files in your folder to copy.</p>
+            )}
+            <p className="muted small">The agent gets its own copies in its own folder. What you change in the Scratchpad afterwards does not reach it; to change the agent, use Edit code in My Agents.</p>
+            <div className="row">
+              <button type="submit" className="primary">
+                Save
               </button>
-              {name === shown && (
-                <button className="pad-tab-x" onClick={() => removeFile(name)} title="Remove this file (it goes to the Recycle Bin)" aria-label={`Remove ${name}`}>
-                  ×
-                </button>
-              )}
-            </span>
-          ))}
-          {naming === null ? (
-            <button
-              className="quiet pad-tab-new"
-              onClick={() => {
-                setNaming('')
-                setFileNote('')
-              }}
-              title="New file in your folder: a Python file to import, or a data file such as schedule.json"
-            >
-              + New file
-            </button>
-          ) : (
-            <form
-              className="pad-tab-form"
-              onSubmit={(e) => {
-                e.preventDefault()
-                createFile(naming)
-              }}
-            >
-              <input
-                autoFocus
-                value={naming}
-                onChange={(e) => setNaming(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Escape') {
-                    setNaming(null)
-                    setFileNote('')
-                  }
-                }}
-                placeholder="tools.py or schedule.json"
-                aria-label="Name of the new file"
-                spellCheck={false}
-              />
-              <button type="submit">Create</button>
-              <button type="button" className="quiet" onClick={() => { setNaming(null); setFileNote('') }}>
+              <button type="button" onClick={() => setSaving(null)}>
                 Cancel
               </button>
-            </form>
-          )}
-          {fileNote && (
-            <span className="rev-bad small pad-tab-note" data-testid="pad-file-note">
-              {fileNote}
-            </span>
-          )}
+            </div>
+          </form>
         </div>
       )}
       <div className="pad-editor" style={split.upper}>
@@ -367,12 +389,8 @@ export default function Scratchpad({ active = true }: { active?: boolean }) {
           <button
             className="quiet"
             disabled={!runCode().trim()}
-            title="Saves this program to My Agents, where you can use it as a chatbot and keep changing it"
-            onClick={() => {
-              const name = saveAsAgent(target ? target.replace(/\.py$/i, '') : 'Scratchpad agent', runCode())
-              setSavedAs(name ? `Saved as “${name}” in My Agents` : 'Could not be saved')
-              setTimeout(() => setSavedAs(''), 4000)
-            }}
+            title="Copies this program, and the files it needs, into My Agents, where you can use it as a chatbot and keep changing it"
+            onClick={beginSave}
           >
             Save as agent
           </button>

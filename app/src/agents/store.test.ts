@@ -1,39 +1,52 @@
 import { describe, expect, it } from 'vitest'
-import { addAgent, changeAgent, emptyAgents, exportAgent, freeName, parseAgentFile, parseAgents, removeAgent, toBubbles, waitingPrompt } from './store'
+import { exportAgent, fromHost, parseAgentFile, toBubbles, waitingPrompt, type Agent } from './store'
 
-describe('the saved list of agents', () => {
-  it('adds, renames and removes, and never reuses a name', () => {
-    let { store, agent } = addAgent(emptyAgents(), { name: 'Balance agent', code: 'print(1)' }, 1000)
-    const second = addAgent(store, { name: 'Balance agent', code: 'print(2)' }, 2000)
-    store = second.store
-    expect(second.agent.name).toBe('Balance agent 2')
-    expect(freeName(store, 'balance AGENT')).toBe('balance AGENT 3')
-    store = changeAgent(store, agent.id, { code: 'print(3)' }, 3000)
-    expect(store.agents[0]).toMatchObject({ code: 'print(3)', created: 1000, updated: 3000 })
-    expect(removeAgent(store, agent.id).agents.map((a) => a.name)).toEqual(['Balance agent 2'])
-  })
+const agent: Agent = {
+  id: 'ph-agent',
+  name: 'pH agent',
+  description: 'Reads a meter',
+  main: 'agent.py',
+  files: { 'agent.py': 'import tools\nprint("hi")', 'tools.py': 'X = 1', 'schedule.json': '{}' },
+  created: 7,
+  updated: 7,
+  spentUsd: 0.5,
+  skipped: 0,
+}
 
-  it('reads back what it saved, and treats anything unreadable as empty', () => {
-    const { store } = addAgent(emptyAgents(), { name: 'A', code: 'x = 1' }, 5)
-    expect(parseAgents(JSON.stringify(store))).toEqual(store)
-    expect(parseAgents('not json')).toEqual(emptyAgents())
-    expect(parseAgents(JSON.stringify({ agents: [{ id: 1 }, { id: 'ok', name: 'B', code: '' }] })).agents.map((a) => a.name)).toEqual(['B'])
+describe('agents as the host program sends them', () => {
+  it('turns the list of files into a lookup by name', () => {
+    const [read] = fromHost([{ ...agent, files: [{ name: 'agent.py', text: 'print(1)' }, { name: 'notes.txt', text: 'hello' }] }])
+    expect(read.files).toEqual({ 'agent.py': 'print(1)', 'notes.txt': 'hello' })
+    expect(read.main).toBe('agent.py')
   })
 })
 
 describe('sharing an agent', () => {
-  it('exports the program and its name, and nothing else', () => {
-    const { agent } = addAgent(emptyAgents(), { name: 'pH agent', description: 'Reads a meter', code: 'print("hi")' }, 7)
+  it('exports its files, which one runs and its name, and nothing else', () => {
     const file = JSON.parse(exportAgent(agent))
-    expect(file).toEqual({ format: 'python-agent', version: 1, name: 'pH agent', description: 'Reads a meter', code: 'print("hi")' })
-    expect(parseAgentFile(exportAgent(agent), 'whatever.agent.json')).toEqual({ name: 'pH agent', description: 'Reads a meter', code: 'print("hi")' })
+    expect(file).toEqual({ format: 'python-agent', version: 2, name: 'pH agent', description: 'Reads a meter', main: 'agent.py', files: agent.files })
+    expect(parseAgentFile(exportAgent(agent), 'pH agent.agent.json')).toEqual({ name: 'pH agent', description: 'Reads a meter', main: 'agent.py', files: agent.files })
+  })
+
+  it('still reads the first version of the file, which held one program', () => {
+    const old = JSON.stringify({ format: 'python-agent', version: 1, name: 'Old', description: '', code: 'print("hi")' })
+    expect(parseAgentFile(old, 'old.agent.json')).toEqual({ name: 'Old', description: '', main: 'main.py', files: { 'main.py': 'print("hi")' } })
   })
 
   it('takes a .py file as the program, and refuses other files with a reason', () => {
-    expect(parseAgentFile('print(1)\n', 'my_agent.py')).toEqual({ name: 'my_agent', description: '', code: 'print(1)\n' })
+    expect(parseAgentFile('print(1)\n', 'my_agent.py')).toEqual({ name: 'my_agent', description: '', main: 'my_agent.py', files: { 'my_agent.py': 'print(1)\n' } })
     expect(parseAgentFile('{"title": "a revision set"}', 'set.json')).toHaveProperty('problem')
     expect(parseAgentFile('hello', 'notes.json')).toHaveProperty('problem')
     expect(parseAgentFile('{"format": "python-agent", "code": " "}', 'x.agent.json')).toHaveProperty('problem')
+  })
+
+  it('refuses files that reach outside the folder, are not text, or name no script to run', () => {
+    const make = (main: unknown, files: unknown) => JSON.stringify({ format: 'python-agent', version: 2, name: 'X', main, files })
+    expect(parseAgentFile(make('a.py', { 'a.py': 'print(1)', '../evil.py': 'x' }), 'x.agent.json')).toHaveProperty('problem')
+    expect(parseAgentFile(make('a.py', { 'a.py': 'print(1)', 'run.exe': 'x' }), 'x.agent.json')).toHaveProperty('problem')
+    expect(parseAgentFile(make('a.py', { 'a.py': 'print(1)', 'b.json': 5 }), 'x.agent.json')).toHaveProperty('problem')
+    expect(parseAgentFile(make('missing.py', { 'a.py': 'print(1)' }), 'x.agent.json')).toHaveProperty('problem')
+    expect(parseAgentFile(make('data.json', { 'data.json': '{}' }), 'x.agent.json')).toHaveProperty('problem')
   })
 })
 

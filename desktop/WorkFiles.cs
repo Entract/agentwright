@@ -21,27 +21,7 @@ internal sealed class WorkFiles(Action<object> send)
         try
         {
             Directory.CreateDirectory(AppPaths.Work);
-            var files = new List<object>();
-            long total = 0;
-            var skipped = 0;
-            foreach (var info in new DirectoryInfo(AppPaths.Work).GetFiles().OrderBy(f => f.Name, StringComparer.OrdinalIgnoreCase))
-            {
-                if (!Allowed(info.Name)) continue;
-                if (files.Count >= MaxFiles || info.Length > MaxFileBytes || total + info.Length > MaxTotalBytes)
-                {
-                    skipped++;
-                    continue;
-                }
-                try
-                {
-                    files.Add(new { name = info.Name, text = File.ReadAllText(info.FullName, Encoding.UTF8) });
-                    total += info.Length;
-                }
-                catch (IOException)
-                {
-                    skipped++; // open in another program
-                }
-            }
+            var (files, skipped) = ReadFolder(AppPaths.Work);
             send(new { type = "files", files, skipped });
         }
         catch (Exception ex)
@@ -77,6 +57,33 @@ internal sealed class WorkFiles(Action<object> send)
         List();
     }
 
+    /// <summary>The text files in one folder that can be shown as tabs, and how many were left out.</summary>
+    public static (List<object> Files, int Skipped) ReadFolder(string folder)
+    {
+        var files = new List<object>();
+        long total = 0;
+        var skipped = 0;
+        foreach (var info in new DirectoryInfo(folder).GetFiles().OrderBy(f => f.Name, StringComparer.OrdinalIgnoreCase))
+        {
+            if (!Allowed(info.Name)) continue;
+            if (files.Count >= MaxFiles || info.Length > MaxFileBytes || total + info.Length > MaxTotalBytes)
+            {
+                skipped++;
+                continue;
+            }
+            try
+            {
+                files.Add(new { name = info.Name, text = File.ReadAllText(info.FullName, Encoding.UTF8) });
+                total += info.Length;
+            }
+            catch (IOException)
+            {
+                skipped++; // open in another program
+            }
+        }
+        return (files, skipped);
+    }
+
     /// <summary>The full path of a file tab, or an exception when the name is not a plain, allowed file name.</summary>
     public static string PathFor(string name)
     {
@@ -84,7 +91,7 @@ internal sealed class WorkFiles(Action<object> send)
         return Path.Combine(AppPaths.Work, name);
     }
 
-    private static bool Allowed(string name) =>
+    public static bool Allowed(string name) =>
         name.Length is > 0 and <= 80
         && name == Path.GetFileName(name)
         && name.IndexOfAny(Path.GetInvalidFileNameChars()) < 0
