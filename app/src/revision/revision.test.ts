@@ -4,6 +4,7 @@ import { testPyodide } from '../runner/testPyodide'
 import { GAPS, MENTOR_INSTRUCTIONS, addSet, cardKey, dueNow, emptyStore, extractJson, needsPerson, parseSet, parseStore, pcCheckScript, readPcCheck, record, removeSet, sameOutput, selfJudged, setSummary, writeRun, type Question } from './format'
 import { findFaults } from './Revision'
 import sample from './sample-set.json'
+import { READY_MADE } from './readyMade'
 
 const text = JSON.stringify(sample)
 
@@ -123,6 +124,23 @@ describe('checking code with Python', () => {
     const bad = writeRun(q, 'print("ho")')
     expect((await run({ code: bad.code, tests: bad.tests })).tests[0].passed).toBe(false)
   })
+
+  it('ships the five lessons and the drill as ready-made sets that import whole and run clean', async () => {
+    expect(READY_MADE.map((r) => r.file)).toEqual([
+      'Lesson_1_Dates_and_Times.json',
+      'Lesson_2_Tables_of_Data.json',
+      'Lesson_3_Text_and_Logs.json',
+      'Lesson_4_Errors_and_Guards.json',
+      'Lesson_5_Reading_Starter_Code.json',
+      'Sight_Reading_Python.json',
+    ])
+    for (const r of READY_MADE) {
+      const parsed = parseSet(r.text)
+      expect(parsed.problems, r.file).toEqual([])
+      expect(parsed.questions, r.file).toHaveLength(r.count)
+      expect(await findFaults(parsed.questions, run), r.file).toEqual({})
+    }
+  }, 120_000)
 
   it('finds no faults in the sample, and flags a question whose own solution fails', async () => {
     const questions = parseSet(text).questions

@@ -15,6 +15,7 @@ import Mentor from './Mentor'
 import { saveAsAgent } from '../agents/store'
 import { readMarks, type Mark } from './mentorText'
 import Confetti from './Confetti'
+import { READY_MADE } from './readyMade'
 import './revision.css'
 
 export interface RevisionStorage {
@@ -800,6 +801,7 @@ export default function Revision({ storage, saveFile, phoneKeys = false, wide = 
   const [pasted, setPasted] = useState('')
   const [message, setMessage] = useState('')
   const [showHelp, setShowHelp] = useState(false)
+  const [adding, setAdding] = useState(false)
   const repeated = useRef(new Set<string>())
   const fileInput = useRef<HTMLInputElement>(null)
   const [host, setHost] = useState<HostInfo | null>(null)
@@ -860,6 +862,15 @@ export default function Revision({ storage, saveFile, phoneKeys = false, wide = 
   }
 
   async function importText(text: string) {
+    setAdding(true)
+    try {
+      await importChecked(text)
+    } finally {
+      setAdding(false)
+    }
+  }
+
+  async function importChecked(text: string) {
     setMessage('')
     let parsed
     try {
@@ -942,7 +953,7 @@ export default function Revision({ storage, saveFile, phoneKeys = false, wide = 
     <div className="rev-page" data-testid="rev-home">
       <h1>Revision</h1>
       {store.sets.length === 0 ? (
-        <p>No sets yet. Ask your mentor to turn a session into a set, then paste it below. The button under the box copies the instructions to give them.</p>
+        <p>No sets yet. Add a ready-made set below, or ask your mentor to turn a session into a set and paste it into the box. The button under the box copies the instructions to give them.</p>
       ) : (
         <>
           <div className="row">
@@ -984,6 +995,44 @@ export default function Revision({ storage, saveFile, phoneKeys = false, wide = 
               )
             })}
           </ul>
+        </>
+      )}
+
+      {READY_MADE.length > 0 && (
+        <>
+          <h2>Ready-made sets</h2>
+          <ul className="rev-sets" data-testid="rev-ready">
+            {READY_MADE.map((r) => {
+              const added = store.sets.some((s) => s.title === r.title)
+              return (
+                <li key={r.file}>
+                  <div>
+                    <strong>{r.title}</strong>
+                    <div className="muted small">{r.count} questions</div>
+                  </div>
+                  <div className="row">
+                    <button onClick={() => importText(r.text)} disabled={added || adding}>
+                      {added ? 'Added' : 'Add'}
+                    </button>
+                  </div>
+                </li>
+              )
+            })}
+          </ul>
+          {READY_MADE.some((r) => !store.sets.some((s) => s.title === r.title)) && (
+            <div className="row">
+              <button
+                onClick={async () => {
+                  for (const r of READY_MADE) {
+                    if (!store.sets.some((s) => s.title === r.title)) await importText(r.text)
+                  }
+                }}
+                disabled={adding}
+              >
+                Add all that are not added yet
+              </button>
+            </div>
+          )}
         </>
       )}
 
