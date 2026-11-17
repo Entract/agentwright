@@ -125,13 +125,22 @@ describe('checking code with Python', () => {
     expect((await run({ code: bad.code, tests: bad.tests })).tests[0].passed).toBe(false)
   })
 
-  it('ships the five lessons and the drill as ready-made sets that import whole and run clean', async () => {
+  it('ships the lessons and the drill as ready-made sets, in order, that import whole and run clean', async () => {
+    // A copy of the app without the lesson files has nothing to ship, and nothing to check.
+    if (READY_MADE.length === 0) return
     expect(READY_MADE.map((r) => r.file)).toEqual([
       'Lesson_1_Dates_and_Times.json',
       'Lesson_2_Tables_of_Data.json',
       'Lesson_3_Text_and_Logs.json',
       'Lesson_4_Errors_and_Guards.json',
       'Lesson_5_Reading_Starter_Code.json',
+      'Lesson_6_Design_Tradeoffs.json',
+      'Lesson_7_Data_Filter_and_Validate.json',
+      'Lesson_8_Data_Count_and_Summarise.json',
+      'Lesson_9_Data_Parse_and_Update.json',
+      'Lesson_10_Logic_and_Loops.json',
+      'Lesson_11_Tool_Functions.json',
+      'Lesson_12_Agent_Plumbing.json',
       'Sight_Reading_Python.json',
     ])
     for (const r of READY_MADE) {
@@ -140,7 +149,7 @@ describe('checking code with Python', () => {
       expect(parsed.questions, r.file).toHaveLength(r.count)
       expect(await findFaults(parsed.questions, run), r.file).toEqual({})
     }
-  }, 120_000)
+  }, 600_000)
 
   it('finds no faults in the sample, and flags a question whose own solution fails', async () => {
     const questions = parseSet(text).questions

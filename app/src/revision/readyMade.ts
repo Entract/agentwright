@@ -23,4 +23,4 @@ export const READY_MADE: ReadyMadeSet[] = Object.entries(files)
     text: JSON.stringify(set),
   }))
   // The five lessons in order, then the drill.
-  .sort((a, b) => (a.file.startsWith('Lesson_') === b.file.startsWith('Lesson_') ? a.file.localeCompare(b.file) : a.file.startsWith('Lesson_') ? -1 : 1))
+  .sort((a, b) => (a.file.startsWith('Lesson_') === b.file.startsWith('Lesson_') ? a.file.localeCompare(b.file, undefined, { numeric: true }) : a.file.startsWith('Lesson_') ? -1 : 1))
