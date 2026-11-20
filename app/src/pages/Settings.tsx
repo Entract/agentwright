@@ -130,7 +130,7 @@ export default function Settings() {
 
       <h2>About</h2>
       <p className="muted">
-        Python Learning Lab 0.1.0, course content version {CONTENT_VERSION}. Your code runs on this device in a sandboxed Python (Pyodide) inside a background
+        Python Learning Lab 0.2.0, course content version {CONTENT_VERSION}. Your code runs on this device in a sandboxed Python (Pyodide) inside a background
         worker, with a five-second limit. That is suitable for your own exercises; it is not a hardened security boundary for untrusted code.
       </p>
     </section>
